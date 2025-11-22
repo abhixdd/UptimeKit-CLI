@@ -1,0 +1,62 @@
+{
+  "name": "uptimekit",
+  "version": "1.0.8",
+  "description": "A cross-platform CLI for monitoring website/server health with a TUI dashboard.",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "uptimekit": "dist/index.js",
+    "upkit": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "CONTRIBUTING.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhixdd/UptimeKit-CLI.git"
+  },
+  "bugs": {
+    "url": "https://github.com/abhixdd/UptimeKit-CLI/issues"
+  },
+  "homepage": "https://github.com/abhixdd/UptimeKit-CLI#readme",
+  "scripts": {
+    "build": "babel src -d dist",
+    "postbuild": "node -e \"const fs = require('fs'); const path = require('path'); const file = path.join('dist', 'index.js'); const content = fs.readFileSync(file, 'utf8'); if (!content.startsWith('#!')) { fs.writeFileSync(file, '#!/usr/bin/env node\\n' + content); }\"",
+    "prestart": "npm run build",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "cli",
+    "monitoring",
+    "uptime",
+    "tui",
+    "ink",
+    "nodejs",
+    "uptimekit"
+  ],
+  "author": "abhixdd",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "better-sqlite3": "^12.4.5",
+    "chalk": "^5.3.0",
+    "commander": "^11.1.0",
+    "date-fns": "^2.30.0",
+    "ink": "^4.4.1",
+    "mkdirp": "^3.0.1",
+    "ora": "^7.0.1",
+    "ping": "^0.4.4",
+    "react": "^18.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@babel/preset-react": "^7.28.5"
+  }
+}

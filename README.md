@@ -10,6 +10,7 @@
 
 </div>
 
+![UptimeKit preview](./preview.png)
 ---
 
 ## Installation

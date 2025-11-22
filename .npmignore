@@ -1,0 +1,20 @@
+# Exclude preview images and dev assets from npm package
+preview.png
+assets/
+screenshots/
+*.psd
+*.sketch
+
+# Development / tooling files
+.vscode/
+.git/
+.gitignore
+.eslintrc*
+.prettier*
+babel.config.json
+node_modules/
+*.log
+*.tmp
+
+
+CONTRIBUTING.md

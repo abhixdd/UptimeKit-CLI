@@ -1,6 +1,6 @@
 <div align="center">
 
-# UptimeKit
+# UptimeKit 🖳
 
 **Production-ready uptime monitoring from your terminal**
 

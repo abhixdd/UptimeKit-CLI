@@ -35,11 +35,14 @@ export async function initDB() {
       status TEXT NOT NULL,
       latency INTEGER,
       timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (monitor_id) REFERENCES monitors (id)
+      FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
     );
+    
+    CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
+    CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
   `);
 
-  // just in case if anyone is running on older verison
+  // Migration: Ensure 'name' column exists
   try {
     const cols = db.prepare("PRAGMA table_info('monitors')").all();
     const hasName = cols.some(c => c.name === 'name');
@@ -47,8 +50,11 @@ export async function initDB() {
       db.prepare('ALTER TABLE monitors ADD COLUMN name TEXT').run();
     }
   } catch (err) {
-    // meh, probably fine
+    console.error('Database migration error:', err);
   }
+
+  // Prune old data on startup
+  pruneOldHeartbeats();
 }
 
 export function getDB() {
@@ -57,8 +63,49 @@ export function getDB() {
       fs.mkdirSync(DB_DIR, { recursive: true });
     }
     db = new Database(DB_PATH);
+    db.pragma('journal_mode = WAL');
   }
   return db;
+}
+
+export function pruneOldHeartbeats() {
+  try {
+    const db = getDB();
+    db.prepare("DELETE FROM heartbeats WHERE timestamp < datetime('now', '-30 days')").run();
+  } catch (err) {
+    console.error('Failed to prune old heartbeats:', err);
+  }
+}
+
+export function resetDB() {
+  const db = getDB();
+  db.exec(`
+    DROP TABLE IF EXISTS heartbeats;
+    DROP TABLE IF EXISTS monitors;
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS monitors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      type TEXT NOT NULL,
+      url TEXT NOT NULL,
+      port INTEGER,
+      interval INTEGER NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS heartbeats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      monitor_id INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      latency INTEGER,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
+    CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
+  `);
 }
 
 export function addMonitor(type, url, interval, name = null) {
@@ -111,59 +158,63 @@ export function logHeartbeat(monitorId, status, latency) {
 }
 
 export function getStats() {
-  const monitors = getMonitors();
-  const stats = monitors.map(monitor => {
-    const heartbeats = getDB().prepare('SELECT status, timestamp, latency FROM heartbeats WHERE monitor_id = ? ORDER BY timestamp DESC').all(monitor.id);
+  const db = getDB();
 
-    const totalChecks = heartbeats.length;
-    const successChecks = heartbeats.filter(h => h.status === 'up').length;
-    const uptime = totalChecks > 0 ? ((successChecks / totalChecks) * 100).toFixed(2) : 0;
+  // Single optimized query to get latest status and aggregate stats for all monitors
+  const sql = `
+    SELECT 
+      m.*,
+      COUNT(h.id) as total_checks,
+      SUM(CASE WHEN h.status = 'up' THEN 1 ELSE 0 END) as success_checks,
+      AVG(h.latency) as avg_latency,
+      (SELECT status FROM heartbeats WHERE monitor_id = m.id ORDER BY timestamp DESC LIMIT 1) as current_status,
+      (SELECT latency FROM heartbeats WHERE monitor_id = m.id ORDER BY timestamp DESC LIMIT 1) as current_latency,
+      (SELECT timestamp FROM heartbeats WHERE monitor_id = m.id ORDER BY timestamp DESC LIMIT 1) as last_check_ts,
+      (SELECT timestamp FROM heartbeats WHERE monitor_id = m.id AND status = 'down' ORDER BY timestamp DESC LIMIT 1) as last_down_ts
+    FROM monitors m
+    LEFT JOIN heartbeats h ON m.id = h.monitor_id
+    GROUP BY m.id
+  `;
 
-    // sqlite dates are weird, gotta fix the format
+  const rows = db.prepare(sql).all();
+
+  return rows.map(row => {
+    const uptime = row.total_checks > 0
+      ? ((row.success_checks / row.total_checks) * 100).toFixed(2)
+      : 0;
+
+    // Helper to parse SQLite UTC string to Date object
     const parseDBTimestamp = (ts) => {
       if (!ts) return null;
       return new Date(ts.replace(' ', 'T') + 'Z');
     };
 
-    const lastHeartbeat = heartbeats[0];
-    const currentStatus = lastHeartbeat ? lastHeartbeat.status : 'unknown';
-    const currentLatency = lastHeartbeat ? lastHeartbeat.latency : 0;
-    const lastCheckTime = lastHeartbeat ? formatDistanceToNow(parseDBTimestamp(lastHeartbeat.timestamp), { addSuffix: true }) : 'Never';
+    const lastCheckTime = row.last_check_ts
+      ? formatDistanceToNow(parseDBTimestamp(row.last_check_ts), { addSuffix: true })
+      : 'Never';
 
     let lastDowntimeText = 'No downtime';
+    if (row.last_down_ts) {
+      lastDowntimeText = formatDistanceToNow(parseDBTimestamp(row.last_down_ts), { addSuffix: true });
+    }
 
-    if (heartbeats.length > 0) {
-      if (currentStatus === 'down') {
-        let startTimestamp = null;
-        for (let i = 0; i < heartbeats.length; i++) {
-          const h = heartbeats[i];
-          const next = heartbeats[i + 1];
-          if (h.status === 'down' && (!next || next.status === 'up')) {
-            startTimestamp = h.timestamp;
-            break;
-          }
-        }
-        if (!startTimestamp && lastHeartbeat) startTimestamp = lastHeartbeat.timestamp;
-        if (startTimestamp) {
-          lastDowntimeText = `Down for ${formatDistanceToNow(parseDBTimestamp(startTimestamp), { addSuffix: false })}`;
-        }
-      } else {
-        const lastDown = heartbeats.find(h => h.status === 'down');
-        if (lastDown) {
-          lastDowntimeText = formatDistanceToNow(parseDBTimestamp(lastDown.timestamp), { addSuffix: true });
-        }
-      }
+    // If currently down, try to calculate how long it's been down
+    if (row.current_status === 'down' && row.last_down_ts) {
+
+      lastDowntimeText = `Since ${formatDistanceToNow(parseDBTimestamp(row.last_down_ts), { addSuffix: true })}`;
     }
 
     return {
-      ...monitor,
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      url: row.url,
+      interval: row.interval,
       uptime: uptime,
       lastDowntime: lastDowntimeText,
-      status: currentStatus,
-      latency: currentLatency,
+      status: row.current_status || 'unknown',
+      latency: Math.round(row.current_latency || 0),
       lastCheck: lastCheckTime
     };
   });
-
-  return stats;
 }

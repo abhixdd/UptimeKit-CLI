@@ -47,12 +47,28 @@ export default function MonitorDetail({ idOrName }) {
                 }
 
                 if (mounted) {
-                    setMonitor(prev => (JSON.stringify(prev) !== JSON.stringify(m) ? m : prev));
+                    setMonitor(prev => {
+                        if (!prev) return m;
+                        return prev.id === m.id ? prev : m;
+                    });
 
                     const hb = getHeartbeatsForMonitor(m.id, 60);
-                    setHeartbeats(prev => (JSON.stringify(prev) !== JSON.stringify(hb) ? hb : prev));
+
+                    setHeartbeats(prev => {
+                        if (prev.length === 0 && hb.length === 0) return prev;
+                        if (prev.length !== hb.length) return hb;
+
+                        const lastPrev = prev[0];
+                        const lastNew = hb[0];
+
+                        if (!lastPrev || !lastNew) return hb;
+                        if (lastPrev.timestamp !== lastNew.timestamp) return hb;
+
+                        return prev;
+                    });
                 }
             } catch (e) {
+                // ignore
             }
         };
 

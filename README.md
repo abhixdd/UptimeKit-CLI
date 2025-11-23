@@ -70,6 +70,9 @@ upkit del <id>           # alias
 
 uptimekit clear          # Clear all monitors
 upkit clr                # alias
+
+uptimekit reset          # Reset the database
+upkit reset              # alias
 ```
 
 ### Options for `add`

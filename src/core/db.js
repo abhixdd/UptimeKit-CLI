@@ -120,6 +120,32 @@ export function addMonitor(type, url, interval, name = null) {
   return stmt.run(type, url, interval, name);
 }
 
+export function updateMonitor(id, updates) {
+  const db = getDB();
+  const { name, url, type, interval } = updates;
+
+  if (name) {
+    const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?) AND id != ?').get(name, id);
+    if (existing) {
+      throw new Error(`Monitor with name '${name}' already exists.`);
+    }
+  }
+
+  const fields = [];
+  const values = [];
+
+  if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+  if (url !== undefined) { fields.push('url = ?'); values.push(url); }
+  if (type !== undefined) { fields.push('type = ?'); values.push(type); }
+  if (interval !== undefined) { fields.push('interval = ?'); values.push(interval); }
+
+  if (fields.length === 0) return;
+
+  values.push(id);
+  const sql = `UPDATE monitors SET ${fields.join(', ')} WHERE id = ?`;
+  return db.prepare(sql).run(...values);
+}
+
 export function getMonitors() {
   return getDB().prepare('SELECT * FROM monitors').all();
 }

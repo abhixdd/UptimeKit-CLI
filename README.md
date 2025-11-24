@@ -65,6 +65,9 @@ upkit st                 # alias
 uptimekit status <id>    # View monitor details
 upkit st <id>            # alias
 
+uptimekit edit <id>      # Edit monitor
+upkit edit <id>          # alias
+
 uptimekit delete <id>    # Delete monitor
 upkit del <id>           # alias
 
@@ -75,10 +78,11 @@ uptimekit reset          # Reset the database
 upkit reset              # alias
 ```
 
-### Options for `add`
-- `-t, --type` - Monitor type: `http`, `icmp`, `dns` (required)
+### Options for `add` and `edit`
+- `-t, --type` - Monitor type: `http`, `icmp`, `dns`
 - `-i, --interval` - Check interval in seconds (default: 60)
 - `-n, --name` - Custom name
+- `-u, --url` - URL/Host (for `edit` command)
 
 ## Monitor Types
 
@@ -117,6 +121,12 @@ upkit st 1
 
 # Delete monitor #1
 upkit del 1
+
+# Edit monitor #1 (interactive)
+upkit edit 1
+
+# Edit monitor #1 (flags)
+upkit edit 1 -i 120 -n "Updated Name"
 ```
 
 ## Dashboard

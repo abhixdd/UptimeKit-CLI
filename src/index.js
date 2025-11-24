@@ -43,7 +43,7 @@ program.configureOutput({
 program
   .name('uptimekit')
   .description('UptimeKit CLI - Monitor your services from the terminal')
-  .version('1.2.04', '-v, --version');
+  .version('1.2.06', '-v, --version');
 
 registerStartCommand(program);  // alias
 registerStopCommand(program);   // alias

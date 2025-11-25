@@ -11,6 +11,7 @@ import path from 'path';
 import os from 'os';
 import { registerResetCommand } from './commands/reset.js';
 import { registerEditCommand } from './commands/edit.js';
+import { registerNotificationsCommand } from './commands/notifications.js';
 
 function isDaemonRunning() {
   const pidPath = path.join(os.homedir(), '.uptimekit', 'daemon.pid');
@@ -43,7 +44,7 @@ program.configureOutput({
 program
   .name('uptimekit')
   .description('UptimeKit CLI - Monitor your services from the terminal')
-  .version('1.2.10', '-v, --version');
+  .version('1.2.12', '-v, --version');
 
 registerStartCommand(program);  // alias
 registerStopCommand(program);   // alias
@@ -53,9 +54,10 @@ registerDeleteCommand(program); // alias
 registerClearCommand(program);  // alias
 registerResetCommand(program);
 registerEditCommand(program);
+registerNotificationsCommand(program);
 
 // gotta make sure the daemon is actually running
-const allowedIfNotRunning = ['help', 'start', '-v', '--version', '-h', '--help', 'reset', 'clear'];
+const allowedIfNotRunning = ['help', 'start', '-v', '--version', '-h', '--help', 'reset', 'clear', 'notifications', 'notif'];
 const userCmd = process.argv[2];
 if (!isDaemonRunning() && userCmd && !allowedIfNotRunning.includes(userCmd)) {
   console.log('UptimeKit is not running. Please start it first using "upkit start".');

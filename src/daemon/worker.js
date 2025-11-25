@@ -1,4 +1,5 @@
-import { initDB, getMonitors, logHeartbeat } from '../core/db.js';
+import { initDB, getMonitors, logHeartbeat, getNotificationSettings } from '../core/db.js';
+import { notifyMonitorDown, notifyMonitorUp } from '../core/notifier.js';
 import axios from 'axios';
 import ping from 'ping';
 import dns from 'dns/promises';
@@ -34,14 +35,36 @@ async function checkMonitor(monitor) {
     latency = Date.now() - start;
   }
 
+  // Get previous status to detect changes
+  const monitorData = activeMonitors.get(monitor.id);
+  const previousStatus = monitorData?.lastStatus;
+
+  // Log heartbeat
   try {
     logHeartbeat(monitor.id, status, Math.round(latency));
   } catch (err) {
     console.error('Failed to log heartbeat:', err);
   }
+
+  // Send notifications on status change
+  if (previousStatus && previousStatus !== status) {
+    const notificationsEnabled = getNotificationSettings();
+    if (notificationsEnabled) {
+      if (status === 'down') {
+        notifyMonitorDown(monitor.name, monitor.url);
+      } else if (status === 'up') {
+        notifyMonitorUp(monitor.name, monitor.url);
+      }
+    }
+  }
+
+  // Update last status
+  if (monitorData) {
+    monitorData.lastStatus = status;
+  }
 }
 
-function startMonitorLoop(monitor) {
+function startMonitorLoop(monitor, initialStatus = null) {
   checkMonitor(monitor);
 
   const intervalId = setInterval(() => {
@@ -50,7 +73,8 @@ function startMonitorLoop(monitor) {
 
   activeMonitors.set(monitor.id, {
     intervalId,
-    monitor
+    monitor,
+    lastStatus: initialStatus // Track last known status
   });
 }
 
@@ -75,7 +99,7 @@ async function refreshMonitors() {
         const current = activeMonitors.get(monitor.id);
         if (current.monitor.interval !== monitor.interval || current.monitor.url !== monitor.url || current.monitor.type !== monitor.type) {
           clearInterval(current.intervalId);
-          startMonitorLoop(monitor);
+          startMonitorLoop(monitor, current.lastStatus);
         }
       }
     }

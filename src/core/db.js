@@ -53,6 +53,21 @@ export async function initDB() {
     console.error('Database migration error:', err);
   }
 
+  // Migration: Ensure 'settings' table exists
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `);
+
+    // Set default notification setting (enabled by default)
+    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('notifications_enabled', '1')").run();
+  } catch (err) {
+    console.error('Settings table migration error:', err);
+  }
+
   // Prune old data on startup
   pruneOldHeartbeats();
 }
@@ -243,4 +258,27 @@ export function getStats() {
       lastCheck: lastCheckTime
     };
   });
+}
+
+export function getNotificationSettings() {
+  const db = getDB();
+  try {
+    const result = db.prepare("SELECT value FROM settings WHERE key = 'notifications_enabled'").get();
+    return result ? result.value === '1' : true;
+  } catch (err) {
+    console.error('Failed to get notification settings:', err);
+    return true;
+  }
+}
+
+export function setNotificationSettings(enabled) {
+  const db = getDB();
+  try {
+    const value = enabled ? '1' : '0';
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('notifications_enabled', ?)").run(value);
+    return true;
+  } catch (err) {
+    console.error('Failed to set notification settings:', err);
+    return false;
+  }
 }

@@ -40,6 +40,7 @@ upkit status 1
 - **Background Daemon** - Continuous monitoring without keeping terminal open
 - **Live Dashboard** - Real-time TUI with status, latency, and uptime metrics
 - **Multi-Protocol** - HTTP/HTTPS, ICMP Ping, and DNS monitoring
+- **Desktop Notifications** - Get notified when monitors go down or come back up
 - **Rich Metrics** - Latency sparklines, P95, status history timeline
 - **Lightweight** - Minimal resource usage with SQLite storage
 
@@ -76,6 +77,18 @@ upkit clr                # alias
 
 uptimekit reset          # Reset the database
 upkit reset              # alias
+```
+
+### Notifications
+```bash
+uptimekit notif enable   # Enable desktop notifications
+upkit notif enable       # alias
+
+uptimekit notif disable  # Disable desktop notifications
+upkit notif disable      # alias
+
+uptimekit notif status   # Check notification status
+upkit notif status       # alias
 ```
 
 ### Options for `add` and `edit`

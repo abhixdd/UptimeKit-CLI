@@ -86,11 +86,22 @@ export function registerAddCommand(program) {
           }
         } else if (options.type === 'icmp' || options.type === 'dns') {
           const host = finalUrl.replace(/^https?:\/\//, '').replace(/\/.+$/, '').trim();
-          const hostnameRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$/;
-          const parts = host.split('.');
-          const ok = parts.every(p => hostnameRegex.test(p));
-          if (!ok) {
-            const answer = await question(`The host '${host}' looks suspicious. Type a valid hostname (or press enter to abort): `);
+
+          const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+          const isIPv4Format = ipv4Regex.test(host);
+
+          let isValid = false;
+          if (isIPv4Format) {
+            const octets = host.split('.').map(Number);
+            isValid = octets.every(octet => octet >= 0 && octet <= 255);
+          } else {
+            const hostnameRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$/;
+            const parts = host.split('.');
+            isValid = parts.every(p => hostnameRegex.test(p));
+          }
+
+          if (!isValid) {
+            const answer = await question(`The host '${host}' looks suspicious. Type a valid hostname or IP (or press enter to abort): `);
             if (!answer || !answer.trim()) {
               console.log(chalk.yellow('Add command aborted.'));
               rl.close();

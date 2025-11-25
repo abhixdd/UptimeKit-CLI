@@ -83,11 +83,23 @@ export function registerEditCommand(program) {
                         return;
                     }
                 } else if (finalType === 'icmp' || finalType === 'dns') {
-                    // Simple hostname validation
+                    // Validate hostname or IP address
                     const host = finalUrl.replace(/^https?:\/\//, '').replace(/\/.+$/, '').trim();
-                    const hostnameRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*$/;
-                    if (!hostnameRegex.test(host) && !/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-                        console.error(chalk.red(`Error: Invalid hostname '${finalUrl}' for ${finalType} monitor.`));
+
+                    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+                    const isIPv4Format = ipv4Regex.test(host);
+
+                    let isValid = false;
+                    if (isIPv4Format) {
+                        const octets = host.split('.').map(Number);
+                        isValid = octets.every(octet => octet >= 0 && octet <= 255);
+                    } else {
+                        const hostnameRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})*$/;
+                        isValid = hostnameRegex.test(host);
+                    }
+
+                    if (!isValid) {
+                        console.error(chalk.red(`Error: Invalid hostname or IP '${finalUrl}' for ${finalType} monitor.`));
                         return;
                     }
                 }

@@ -39,8 +39,9 @@ upkit status 1
 
 - **Background Daemon** - Continuous monitoring without keeping terminal open
 - **Live Dashboard** - Real-time TUI with status, latency, and uptime metrics
-- **Multi-Protocol** - HTTP/HTTPS, ICMP Ping, and DNS monitoring
-- **Desktop Notifications** - Get notified when monitors go down or come back up
+- **Multi-Protocol** - HTTP/HTTPS, ICMP Ping, DNS, and SSL Certificate monitoring
+- **SSL Certificate Monitoring** - Track certificate expiration with alerts
+- **Desktop Notifications** - Get notified when monitors go down or certificates expire
 - **Webhook Alerts** - Send status updates to custom webhook URLs
 - **Rich Metrics** - Latency sparklines, P95, status history timeline
 - **Lightweight** - Minimal resource usage with SQLite storage
@@ -93,7 +94,8 @@ upkit notif status       # alias
 ```
 
 ### Options for `add` and `edit`
-- `-t, --type` - Monitor type: `http`, `icmp`, `dns`
+
+- `-t, --type` - Monitor type: `http`, `icmp`, `dns`, `ssl`
 - `-i, --interval` - Check interval in seconds (default: 60)
 - `-n, --name` - Custom name
 - `-u, --url` - URL/Host (for `edit` command)
@@ -114,6 +116,11 @@ upkit add 8.8.8.8 -t icmp -i 10
 **DNS** - Domain resolution
 ```bash
 upkit add google.com -t dns -i 60
+```
+
+**SSL Certificate** - Certificate expiration monitoring
+```bash
+upkit add example.com -t ssl -i 3600 -n "Example SSL"
 ```
 
 ## Webhooks
@@ -166,6 +173,9 @@ upkit add 8.8.8.8 -t icmp -i 10 -n "Google DNS"
 # Check DNS resolution every minute
 upkit add github.com -t dns -i 60 -n "GitHub DNS"
 
+# Monitor SSL certificate expiration (check every hour)
+upkit add mysite.com -t ssl -i 3600 -n "My Site SSL"
+
 # View all monitors
 upkit st
 
@@ -185,19 +195,35 @@ upkit edit 1 -i 120 -n "Updated Name"
 ## Dashboard
 
 The dashboard shows:
+
 - Monitor status (UP/DOWN)
 - Current latency
 - 24-hour uptime percentage
 - Last downtime
 
+SSL monitors are displayed in a separate table showing:
+
+- Certificate validity status
+- Days remaining until expiration
+- Expiry date
+- Certificate issuer
+
 ## Detail View
 
 The detail view includes:
+
 - Status timeline (last 40 checks)
 - Latency sparkline (last 60 seconds)
 - Current, average, and P95 latency
 - 24-hour uptime percentage
 - Configured webhook URL (if set)
+
+For SSL monitors, the detail view shows:
+
+- Certificate subject and issuer
+- Valid from/to dates
+- Days remaining until expiration
+- Serial number and fingerprint
 
 
 ## Requirements

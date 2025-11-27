@@ -1,6 +1,6 @@
 {
   "name": "uptimekit",
-  "version": "1.2.16",
+  "version": "1.2.18",
   "description": "A cross-platform CLI for monitoring website/server health with a TUI dashboard.",
   "main": "dist/index.js",
   "type": "module",

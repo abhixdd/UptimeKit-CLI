@@ -75,6 +75,28 @@ export async function initDB() {
     console.error('Settings table migration error:', err);
   }
 
+  // Migration: Ensure 'ssl_certificates' table exists
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS ssl_certificates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        monitor_id INTEGER NOT NULL UNIQUE,
+        issuer TEXT,
+        subject TEXT,
+        valid_from TEXT,
+        valid_to TEXT,
+        days_remaining INTEGER,
+        serial_number TEXT,
+        fingerprint TEXT,
+        last_checked TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_ssl_certificates_monitor_id ON ssl_certificates(monitor_id);
+    `);
+  } catch (err) {
+    console.error('SSL certificates table migration error:', err);
+  }
+
   // Prune old data on startup
   pruneOldHeartbeats();
 }
@@ -103,6 +125,7 @@ export function resetDB() {
   const db = getDB();
   db.exec(`
     DROP TABLE IF EXISTS heartbeats;
+    DROP TABLE IF EXISTS ssl_certificates;
     DROP TABLE IF EXISTS monitors;
   `);
   db.exec(`
@@ -125,9 +148,24 @@ export function resetDB() {
       timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS ssl_certificates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      monitor_id INTEGER NOT NULL UNIQUE,
+      issuer TEXT,
+      subject TEXT,
+      valid_from TEXT,
+      valid_to TEXT,
+      days_remaining INTEGER,
+      serial_number TEXT,
+      fingerprint TEXT,
+      last_checked TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
+    );
     
     CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
     CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_ssl_certificates_monitor_id ON ssl_certificates(monitor_id);
   `);
 }
 
@@ -220,9 +258,18 @@ export function getStats() {
       (SELECT status FROM heartbeats WHERE monitor_id = m.id ORDER BY timestamp DESC LIMIT 1) as current_status,
       (SELECT latency FROM heartbeats WHERE monitor_id = m.id ORDER BY timestamp DESC LIMIT 1) as current_latency,
       (SELECT timestamp FROM heartbeats WHERE monitor_id = m.id ORDER BY timestamp DESC LIMIT 1) as last_check_ts,
-      (SELECT timestamp FROM heartbeats WHERE monitor_id = m.id AND status = 'down' ORDER BY timestamp DESC LIMIT 1) as last_down_ts
+      (SELECT timestamp FROM heartbeats WHERE monitor_id = m.id AND status = 'down' ORDER BY timestamp DESC LIMIT 1) as last_down_ts,
+      ssl.issuer as ssl_issuer,
+      ssl.subject as ssl_subject,
+      ssl.valid_from as ssl_valid_from,
+      ssl.valid_to as ssl_valid_to,
+      ssl.days_remaining as ssl_days_remaining,
+      ssl.serial_number as ssl_serial_number,
+      ssl.fingerprint as ssl_fingerprint,
+      ssl.last_checked as ssl_last_checked
     FROM monitors m
     LEFT JOIN heartbeats h ON m.id = h.monitor_id
+    LEFT JOIN ssl_certificates ssl ON m.id = ssl.monitor_id
     GROUP BY m.id
   `;
 
@@ -254,6 +301,21 @@ export function getStats() {
       lastDowntimeText = `Since ${formatDistanceToNow(parseDBTimestamp(row.last_down_ts), { addSuffix: true })}`;
     }
 
+    // Build SSL info for SSL monitors
+    let sslInfo = null;
+    if (row.type === 'ssl') {
+      sslInfo = {
+        issuer: row.ssl_issuer,
+        subject: row.ssl_subject,
+        validFrom: row.ssl_valid_from,
+        validTo: row.ssl_valid_to,
+        daysRemaining: row.ssl_days_remaining,
+        serialNumber: row.ssl_serial_number,
+        fingerprint: row.ssl_fingerprint,
+        lastChecked: row.ssl_last_checked
+      };
+    }
+
     return {
       id: row.id,
       name: row.name,
@@ -264,7 +326,8 @@ export function getStats() {
       lastDowntime: lastDowntimeText,
       status: row.current_status || 'unknown',
       latency: Math.round(row.current_latency || 0),
-      lastCheck: lastCheckTime
+      lastCheck: lastCheckTime,
+      ssl: sslInfo
     };
   });
 }
@@ -290,4 +353,36 @@ export function setNotificationSettings(enabled) {
     console.error('Failed to set notification settings:', err);
     return false;
   }
+}
+
+// SSL Certificate functions
+export function upsertSSLCertificate(monitorId, certData) {
+  const db = getDB();
+  const { issuer, subject, validFrom, validTo, daysRemaining, serialNumber, fingerprint } = certData;
+  
+  const stmt = db.prepare(`
+    INSERT INTO ssl_certificates (monitor_id, issuer, subject, valid_from, valid_to, days_remaining, serial_number, fingerprint, last_checked)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(monitor_id) DO UPDATE SET
+      issuer = excluded.issuer,
+      subject = excluded.subject,
+      valid_from = excluded.valid_from,
+      valid_to = excluded.valid_to,
+      days_remaining = excluded.days_remaining,
+      serial_number = excluded.serial_number,
+      fingerprint = excluded.fingerprint,
+      last_checked = CURRENT_TIMESTAMP
+  `);
+  
+  return stmt.run(monitorId, issuer, subject, validFrom, validTo, daysRemaining, serialNumber, fingerprint);
+}
+
+export function getSSLCertificate(monitorId) {
+  const db = getDB();
+  return db.prepare('SELECT * FROM ssl_certificates WHERE monitor_id = ?').get(monitorId);
+}
+
+export function getAllSSLCertificates() {
+  const db = getDB();
+  return db.prepare('SELECT * FROM ssl_certificates').all();
 }

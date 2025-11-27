@@ -1,10 +1,65 @@
-import { initDB, getMonitors, logHeartbeat, getNotificationSettings } from '../core/db.js';
-import { notifyMonitorDown, notifyMonitorUp } from '../core/notifier.js';
+import { initDB, getMonitors, logHeartbeat, getNotificationSettings, upsertSSLCertificate } from '../core/db.js';
+import { notifyMonitorDown, notifyMonitorUp, notifySSLExpiring, notifySSLExpired, notifySSLValid } from '../core/notifier.js';
 import axios from 'axios';
 import ping from 'ping';
 import dns from 'dns/promises';
+import tls from 'tls';
+import { URL } from 'url';
 
 const activeMonitors = new Map();
+
+// SSL Certificate checking function
+async function checkSSLCertificate(hostname, port = 443) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      host: hostname,
+      port: port,
+      servername: hostname,
+      rejectUnauthorized: false,
+      timeout: 10000
+    };
+
+    const socket = tls.connect(options, () => {
+      try {
+        const cert = socket.getPeerCertificate();
+        socket.end();
+
+        if (!cert || Object.keys(cert).length === 0) {
+          reject(new Error('No certificate found'));
+          return;
+        }
+
+        const validFrom = new Date(cert.valid_from);
+        const validTo = new Date(cert.valid_to);
+        const now = new Date();
+        const daysRemaining = Math.floor((validTo - now) / (1000 * 60 * 60 * 24));
+
+        resolve({
+          issuer: cert.issuer ? (cert.issuer.O || cert.issuer.CN || 'Unknown') : 'Unknown',
+          subject: cert.subject ? (cert.subject.CN || cert.subject.O || hostname) : hostname,
+          validFrom: validFrom.toISOString(),
+          validTo: validTo.toISOString(),
+          daysRemaining: daysRemaining,
+          serialNumber: cert.serialNumber || 'Unknown',
+          fingerprint: cert.fingerprint || 'Unknown',
+          isValid: now >= validFrom && now <= validTo && daysRemaining > 0
+        });
+      } catch (err) {
+        socket.end();
+        reject(err);
+      }
+    });
+
+    socket.on('error', (err) => {
+      reject(err);
+    });
+
+    socket.on('timeout', () => {
+      socket.destroy();
+      reject(new Error('Connection timeout'));
+    });
+  });
+}
 
 async function checkMonitor(monitor) {
   const start = Date.now();
@@ -30,6 +85,33 @@ async function checkMonitor(monitor) {
       await dns.resolve(monitor.url);
       status = 'up';
       latency = Date.now() - start;
+    } else if (monitor.type === 'ssl') {
+      // SSL certificate monitoring
+      let hostname = monitor.url;
+      let port = 443;
+      
+      try {
+        if (hostname.includes('://')) {
+          const parsed = new URL(hostname);
+          hostname = parsed.hostname;
+          port = parsed.port ? parseInt(parsed.port) : 443;
+        } else if (hostname.includes(':')) {
+          const parts = hostname.split(':');
+          hostname = parts[0];
+          port = parseInt(parts[1]) || 443;
+        }
+      } catch (e) {
+       console.error('Error parsing SSL monitor URL:', e);
+      }
+      
+      const certInfo = await checkSSLCertificate(hostname, port);
+      latency = Date.now() - start;
+      
+      upsertSSLCertificate(monitor.id, certInfo);
+  
+      status = certInfo.isValid ? 'up' : 'down';
+      
+      monitor._sslCertInfo = certInfo;
     }
   } catch (error) {
     status = 'down';
@@ -51,10 +133,40 @@ async function checkMonitor(monitor) {
   if (previousStatus && previousStatus !== status) {
     const notificationsEnabled = getNotificationSettings();
     if (notificationsEnabled) {
-      if (status === 'down') {
-        notifyMonitorDown(monitor);
-      } else if (status === 'up') {
-        notifyMonitorUp(monitor);
+      if (monitor.type === 'ssl') {
+        // SSL-specific notifications
+        if (status === 'down') {
+          notifySSLExpired(monitor);
+        } else if (status === 'up') {
+          notifySSLValid(monitor);
+        }
+      } else {
+        // Regular monitor notifications
+        if (status === 'down') {
+          notifyMonitorDown(monitor);
+        } else if (status === 'up') {
+          notifyMonitorUp(monitor);
+        }
+      }
+    }
+  }
+
+  if (monitor.type === 'ssl' && monitor._sslCertInfo && status === 'up') {
+    const notificationsEnabled = getNotificationSettings();
+    if (notificationsEnabled) {
+      const days = monitor._sslCertInfo.daysRemaining;
+      const monitorData = activeMonitors.get(monitor.id);
+      const lastNotifiedDays = monitorData?.lastSSLNotifiedDays;
+      
+      const thresholds = [30, 14, 7, 3, 1];
+      for (const threshold of thresholds) {
+        if (days <= threshold && (lastNotifiedDays === undefined || lastNotifiedDays > threshold)) {
+          notifySSLExpiring(monitor, days);
+          if (monitorData) {
+            monitorData.lastSSLNotifiedDays = days;
+          }
+          break;
+        }
       }
     }
   }

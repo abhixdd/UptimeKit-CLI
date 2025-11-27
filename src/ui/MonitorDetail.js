@@ -141,6 +141,11 @@ export default function MonitorDetail({ idOrName }) {
                         <Text color="cyan">{monitor.url}</Text>
                     </Box>
                     <Text color="gray" dimColor>Type: {monitor.type} • Interval: {monitor.interval}s</Text>
+                    {monitor.webhook_url && (
+                        <Text color="gray" dimColor>
+                            Webhook: {monitor.webhook_url.length > 50 ? monitor.webhook_url.substring(0, 47) + '...' : monitor.webhook_url}
+                        </Text>
+                    )}
                 </Box>
                 <Box flexDirection="column" alignItems="flex-end">
                     <Text color="gray" dimColor>ID: {monitor.id}</Text>

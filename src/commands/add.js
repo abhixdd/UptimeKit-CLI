@@ -17,6 +17,7 @@ export function registerAddCommand(program) {
     .option('-t, --type <type>', 'Type of monitor (http, icmp, dns)')
     .option('-i, --interval <seconds>', 'Check interval in seconds', '60')
     .option('-n, --name <name>', 'Custom name for monitor')
+    .option('-w, --webhook <url>', 'Webhook URL for notifications')
     .action(async (url, options, cmd) => {
       try {
         const allowedTypes = ['http', 'icmp', 'dns'];
@@ -130,7 +131,7 @@ export function registerAddCommand(program) {
           }
         }
 
-        addMonitor(data.type, data.url, data.interval, name);
+        addMonitor(data.type, data.url, data.interval, name, options.webhook);
         console.log(chalk.green(`Monitor added: ${name} (${data.url}, ${data.type})`));
       } catch (err) {
         if (err instanceof z.ZodError) {

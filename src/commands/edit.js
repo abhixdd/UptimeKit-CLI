@@ -7,7 +7,8 @@ const MonitorSchema = z.object({
     url: z.string().min(1).optional(),
     type: z.enum(['http', 'icmp', 'dns']).optional(),
     interval: z.number().min(1).optional(),
-    name: z.string().optional()
+    name: z.string().optional(),
+    webhook_url: z.string().nullable().optional()
 });
 
 export function registerEditCommand(program) {
@@ -18,6 +19,7 @@ export function registerEditCommand(program) {
         .option('-t, --type <type>', 'New type (http, icmp, dns)')
         .option('-i, --interval <seconds>', 'New interval in seconds')
         .option('-n, --name <name>', 'New name')
+        .option('-w, --webhook <url>', 'New webhook URL')
         .action(async (idOrName, options) => {
             try {
                 await initDB();
@@ -35,6 +37,7 @@ export function registerEditCommand(program) {
                 if (options.type) updates.type = options.type;
                 if (options.interval) updates.interval = parseInt(options.interval, 10);
                 if (options.name) updates.name = options.name;
+                if (options.webhook) updates.webhook_url = options.webhook;
 
                 // If no flags provided, go interactive
                 if (Object.keys(updates).length === 0) {
@@ -55,6 +58,12 @@ export function registerEditCommand(program) {
 
                     const newInterval = await question(`Interval [${monitor.interval}]: `);
                     if (newInterval.trim()) updates.interval = parseInt(newInterval.trim(), 10);
+
+                    const currentWebhook = monitor.webhook_url || 'none';
+                    const newWebhook = await question(`Webhook URL [${currentWebhook}]: `);
+                    if (newWebhook.trim()) {
+                        updates.webhook_url = newWebhook.trim() === 'none' ? null : newWebhook.trim();
+                    }
 
                     rl.close();
                 }

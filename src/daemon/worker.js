@@ -52,9 +52,9 @@ async function checkMonitor(monitor) {
     const notificationsEnabled = getNotificationSettings();
     if (notificationsEnabled) {
       if (status === 'down') {
-        notifyMonitorDown(monitor.name, monitor.url);
+        notifyMonitorDown(monitor);
       } else if (status === 'up') {
-        notifyMonitorUp(monitor.name, monitor.url);
+        notifyMonitorUp(monitor);
       }
     }
   }

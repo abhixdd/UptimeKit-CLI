@@ -26,6 +26,7 @@ export async function initDB() {
       url TEXT NOT NULL,
       port INTEGER,
       interval INTEGER NOT NULL,
+      webhook_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -48,6 +49,12 @@ export async function initDB() {
     const hasName = cols.some(c => c.name === 'name');
     if (!hasName) {
       db.prepare('ALTER TABLE monitors ADD COLUMN name TEXT').run();
+    }
+
+    // Migration: Ensure 'webhook_url' column exists
+    const hasWebhook = cols.some(c => c.name === 'webhook_url');
+    if (!hasWebhook) {
+      db.prepare('ALTER TABLE monitors ADD COLUMN webhook_url TEXT').run();
     }
   } catch (err) {
     console.error('Database migration error:', err);
@@ -106,6 +113,7 @@ export function resetDB() {
       url TEXT NOT NULL,
       port INTEGER,
       interval INTEGER NOT NULL,
+      webhook_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -123,7 +131,7 @@ export function resetDB() {
   `);
 }
 
-export function addMonitor(type, url, interval, name = null) {
+export function addMonitor(type, url, interval, name = null, webhookUrl = null) {
   const db = getDB();
   if (name) {
     const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?)').get(name);
@@ -131,13 +139,13 @@ export function addMonitor(type, url, interval, name = null) {
       throw new Error(`Monitor with name '${name}' already exists.`);
     }
   }
-  const stmt = db.prepare('INSERT INTO monitors (type, url, interval, name) VALUES (?, ?, ?, ?)');
-  return stmt.run(type, url, interval, name);
+  const stmt = db.prepare('INSERT INTO monitors (type, url, interval, name, webhook_url) VALUES (?, ?, ?, ?, ?)');
+  return stmt.run(type, url, interval, name, webhookUrl);
 }
 
 export function updateMonitor(id, updates) {
   const db = getDB();
-  const { name, url, type, interval } = updates;
+  const { name, url, type, interval, webhook_url } = updates;
 
   if (name) {
     const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?) AND id != ?').get(name, id);
@@ -153,6 +161,7 @@ export function updateMonitor(id, updates) {
   if (url !== undefined) { fields.push('url = ?'); values.push(url); }
   if (type !== undefined) { fields.push('type = ?'); values.push(type); }
   if (interval !== undefined) { fields.push('interval = ?'); values.push(interval); }
+  if (webhook_url !== undefined) { fields.push('webhook_url = ?'); values.push(webhook_url); }
 
   if (fields.length === 0) return;
 

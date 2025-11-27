@@ -41,6 +41,7 @@ upkit status 1
 - **Live Dashboard** - Real-time TUI with status, latency, and uptime metrics
 - **Multi-Protocol** - HTTP/HTTPS, ICMP Ping, and DNS monitoring
 - **Desktop Notifications** - Get notified when monitors go down or come back up
+- **Webhook Alerts** - Send status updates to custom webhook URLs
 - **Rich Metrics** - Latency sparklines, P95, status history timeline
 - **Lightweight** - Minimal resource usage with SQLite storage
 
@@ -96,6 +97,7 @@ upkit notif status       # alias
 - `-i, --interval` - Check interval in seconds (default: 60)
 - `-n, --name` - Custom name
 - `-u, --url` - URL/Host (for `edit` command)
+- `-w, --webhook` - Webhook URL to receive status updates
 
 ## Monitor Types
 
@@ -114,11 +116,49 @@ upkit add 8.8.8.8 -t icmp -i 10
 upkit add google.com -t dns -i 60
 ```
 
+## Webhooks
+
+Configure webhook URLs to receive HTTP POST notifications when monitors change status (UP/DOWN).
+
+### Webhook Payload
+
+When a monitor's status changes, UptimeKit sends a POST request with the following JSON payload:
+
+```json
+{
+  "event": "monitor_up" ,
+  "monitor": {
+    "name": "My Website",
+    "url": "https://example.com",
+    "status": "up",
+    "time": "2025-11-27T15:40:59.403Z"
+  }
+}
+```
+
+The `event` field will be either `monitor_up` or `monitor_down`.
+
+### Usage
+
+```bash
+# Add monitor with webhook
+upkit add https://mysite.com -t http -n "My Site" -w https://webhook.site/your-id
+
+# Add webhook to existing monitor
+upkit edit 1 -w https://discord.com/api/webhooks/123/abc
+
+# Remove webhook
+upkit edit 1 -w none
+```
+
 ## Examples
 
 ```bash
 # Monitor a website every 30 seconds
 upkit add https://mysite.com -t http -i 30 -n "My Website"
+
+# Monitor with webhook notifications
+upkit add https://mysite.com -t http -i 30 -n "My Website" -w https://webhook.site/your-webhook-id
 
 # Ping Google DNS every 10 seconds
 upkit add 8.8.8.8 -t icmp -i 10 -n "Google DNS"
@@ -157,6 +197,7 @@ The detail view includes:
 - Latency sparkline (last 60 seconds)
 - Current, average, and P95 latency
 - 24-hour uptime percentage
+- Configured webhook URL (if set)
 
 
 ## Requirements

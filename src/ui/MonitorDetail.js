@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
-import { initDB, getMonitorByIdOrName, getHeartbeatsForMonitor } from '../core/db.js';
+import { initDB, getMonitorByIdOrName, getHeartbeatsForMonitor, getSSLCertificate } from '../core/db.js';
 
 const StatBox = ({ label, value, color = "white" }) => (
     <Box flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1} flexGrow={1} marginRight={1}>
@@ -28,6 +28,7 @@ function renderSparkline(values, width = 60) {
 export default function MonitorDetail({ idOrName }) {
     const [monitor, setMonitor] = useState(null);
     const [heartbeats, setHeartbeats] = useState([]);
+    const [sslCert, setSSLCert] = useState(null);
     const [notFound, setNotFound] = useState(false);
     const { exit } = useApp();
 
@@ -66,6 +67,11 @@ export default function MonitorDetail({ idOrName }) {
 
                         return prev;
                     });
+
+                    if (m.type === 'ssl') {
+                        const cert = getSSLCertificate(m.id);
+                        setSSLCert(cert);
+                    }
                 }
             } catch (e) {
                 // ignore
@@ -115,14 +121,142 @@ export default function MonitorDetail({ idOrName }) {
         );
     }
 
+    const isSSL = monitor.type === 'ssl';
     const isUp = stats.currentStatus === 'up' || stats.currentStatus === 200;
-    const statusColor = isUp ? "green" : "red";
+    let statusColor = isUp ? "green" : "red";
+    let statusText = isUp ? "  ONLINE  " : "  OFFLINE  ";
+    
+    if (isSSL && sslCert) {
+        const days = sslCert.days_remaining;
+        if (isUp) {
+            if (days <= 7) {
+                statusColor = "red";
+                statusText = " EXPIRING ";
+            } else if (days <= 30) {
+                statusColor = "yellow";
+                statusText = " WARNING  ";
+            } else {
+                statusColor = "green";
+                statusText = "  VALID   ";
+            }
+        } else {
+            statusColor = "red";
+            statusText = " INVALID  ";
+        }
+    }
 
     // reverse so it reads left-to-right as old-to-new
     const historyBar = heartbeats.slice(0, 40).reverse().map((h, i) => {
         const up = h.status === 'up';
         return <Text key={i} color={up ? "green" : "red"}>{up ? "■" : "■"}</Text>;
     });
+
+    // SSL Certificate Detail View
+    if (isSSL) {
+        const cert = sslCert || {};
+        const daysRemaining = cert.days_remaining;
+        let daysColor = 'green';
+        if (daysRemaining !== null && daysRemaining !== undefined) {
+            if (daysRemaining <= 7) daysColor = 'red';
+            else if (daysRemaining <= 30) daysColor = 'yellow';
+        }
+
+        const formatDate = (dateStr) => {
+            if (!dateStr) return 'Unknown';
+            try {
+                return new Date(dateStr).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch {
+                return dateStr;
+            }
+        };
+
+        return (
+            <Box flexDirection="column" padding={1} borderStyle="round" borderColor={statusColor} minHeight={20}>
+                <Box justifyContent="space-between" marginBottom={1}>
+                    <Box flexDirection="column">
+                        <Box alignItems="center">
+                            <Text bold color="white" backgroundColor={statusColor}>
+                                {statusText}
+                            </Text>
+                            <Box marginLeft={1}>
+                                <Text bold color="white" underline>{monitor.name || "SSL Monitor"}</Text>
+                            </Box>
+                        </Box>
+                        <Box marginTop={1}>
+                            <Text color="cyan">{monitor.url}</Text>
+                        </Box>
+                        <Text color="gray" dimColor>Type: SSL Certificate • Interval: {monitor.interval}s</Text>
+                    </Box>
+                    <Box flexDirection="column" alignItems="flex-end">
+                        <Text color="gray" dimColor>ID: {monitor.id}</Text>
+                        <Text color="gray" dimColor>Press 'q' to quit</Text>
+                    </Box>
+                </Box>
+
+                <Box flexDirection="column" marginBottom={1}>
+                    <Text bold color="white">Certificate Status History (Last 40 checks)</Text>
+                    <Box borderStyle="single" borderColor="gray" paddingX={1}>
+                        {historyBar.length > 0 ? historyBar : <Text color="gray">No data yet...</Text>}
+                    </Box>
+                </Box>
+
+                <Box flexDirection="column" marginBottom={1} borderStyle="single" borderColor="gray" padding={1}>
+                    <Text bold color="white" underline>SSL Certificate Details</Text>
+                    <Box marginTop={1} flexDirection="column">
+                        <Box>
+                            <Box width="20%"><Text color="gray">Subject:</Text></Box>
+                            <Box><Text color="cyan">{cert.subject || 'Unknown'}</Text></Box>
+                        </Box>
+                        <Box>
+                            <Box width="20%"><Text color="gray">Issuer:</Text></Box>
+                            <Box><Text>{cert.issuer || 'Unknown'}</Text></Box>
+                        </Box>
+                        <Box>
+                            <Box width="20%"><Text color="gray">Valid From:</Text></Box>
+                            <Box><Text>{formatDate(cert.valid_from)}</Text></Box>
+                        </Box>
+                        <Box>
+                            <Box width="20%"><Text color="gray">Valid To:</Text></Box>
+                            <Box><Text color={daysColor}>{formatDate(cert.valid_to)}</Text></Box>
+                        </Box>
+                        <Box>
+                            <Box width="20%"><Text color="gray">Serial Number:</Text></Box>
+                            <Box><Text dimColor>{cert.serial_number || 'Unknown'}</Text></Box>
+                        </Box>
+                        <Box>
+                            <Box width="20%"><Text color="gray">Fingerprint:</Text></Box>
+                            <Box><Text dimColor>{cert.fingerprint ? cert.fingerprint.substring(0, 40) + '...' : 'Unknown'}</Text></Box>
+                        </Box>
+                        <Box>
+                            <Box width="20%"><Text color="gray">Last Checked:</Text></Box>
+                            <Box><Text dimColor>{formatDate(cert.last_checked)}</Text></Box>
+                        </Box>
+                    </Box>
+                </Box>
+
+                <Box flexDirection="row" justifyContent="space-between">
+                    <StatBox 
+                        label="Days Remaining" 
+                        value={daysRemaining !== null && daysRemaining !== undefined ? `${daysRemaining} days` : 'N/A'} 
+                        color={daysColor} 
+                    />
+                    <StatBox 
+                        label="Certificate Status" 
+                        value={isUp ? (daysRemaining <= 7 ? 'Expiring Soon!' : daysRemaining <= 30 ? 'Warning' : 'Valid') : 'Invalid'} 
+                        color={daysColor} 
+                    />
+                    <StatBox label="Check Interval" value={`${monitor.interval}s`} />
+                    <StatBox label="Validity Rate" value={`${stats.uptime}%`} color={parseFloat(stats.uptime) > 99 ? "green" : "yellow"} />
+                </Box>
+            </Box>
+        );
+    }
 
     return (
         <Box flexDirection="column" padding={1} borderStyle="round" borderColor={statusColor} minHeight={20}>

@@ -5,7 +5,7 @@ import readline from 'readline';
 
 const MonitorSchema = z.object({
   url: z.string().min(1),
-  type: z.enum(['http', 'icmp', 'dns']),
+  type: z.enum(['http', 'icmp', 'dns', 'ssl']),
   interval: z.number().min(1)
 });
 
@@ -13,14 +13,14 @@ export function registerAddCommand(program) {
   program
     .command('add <url>')
     .description('Add a new monitor')
-    .addHelpText('after', '\n\nExamples:\n  uptimekit add https://example2.com -t http -i 30 -n newsite\n  uptimekit add google.com -t dns -i 60 -n googledns\n')
-    .option('-t, --type <type>', 'Type of monitor (http, icmp, dns)')
+    .addHelpText('after', '\n\nExamples:\n  uptimekit add https://example2.com -t http -i 30 -n newsite\n  uptimekit add google.com -t dns -i 60 -n googledns\n  uptimekit add example.com -t ssl -i 3600 -n myssl\n')
+    .option('-t, --type <type>', 'Type of monitor (http, icmp, dns, ssl)')
     .option('-i, --interval <seconds>', 'Check interval in seconds', '60')
     .option('-n, --name <name>', 'Custom name for monitor')
     .option('-w, --webhook <url>', 'Webhook URL for notifications')
     .action(async (url, options, cmd) => {
       try {
-        const allowedTypes = ['http', 'icmp', 'dns'];
+        const allowedTypes = ['http', 'icmp', 'dns', 'ssl'];
         if (!options.type) {
           console.error(chalk.red('Error: Missing required flag -t/--type.'));
           console.log('Available types:', allowedTypes.join(', '));
@@ -109,6 +109,27 @@ export function registerAddCommand(program) {
               return;
             }
             finalUrl = answer.trim();
+          }
+        } else if (options.type === 'ssl') {
+          let host = finalUrl.replace(/^https?:\/\//, '').replace(/\/.+$/, '').split(':')[0].trim();
+
+          const hostnameRegex = /^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$/;
+          const parts = host.split('.');
+          const isValidHostname = parts.length >= 2 && parts.every(p => hostnameRegex.test(p));
+
+          if (!isValidHostname) {
+            const answer = await question(`The hostname '${host}' looks invalid for SSL check. Type a valid hostname (or press enter to abort): `);
+            if (!answer || !answer.trim()) {
+              console.log(chalk.yellow('Add command aborted.'));
+              rl.close();
+              return;
+            }
+            finalUrl = answer.trim();
+          } else {
+            finalUrl = host;
+          }
+          if (options.interval < '200') {
+            console.log(chalk.gray('Note: SSL checks typically don\'t need frequent intervals. Consider using -i 3600 (1 hour) or higher.'));
           }
         }
 

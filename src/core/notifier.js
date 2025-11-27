@@ -70,3 +70,53 @@ export function notifyMonitorUp(monitor) {
         sendWebhook(monitor.webhook_url, 'monitor_up', monitor);
     }
 }
+
+export function notifySSLExpiring(monitor, daysRemaining) {
+    const displayName = monitor.name || monitor.url;
+    let title, message;
+    
+    if (daysRemaining <= 7) {
+        title = '🚨 SSL Certificate Critical';
+        message = `${displayName} certificate expires in ${daysRemaining} days!`;
+    } else if (daysRemaining <= 14) {
+        title = '⚠️ SSL Certificate Warning';
+        message = `${displayName} certificate expires in ${daysRemaining} days`;
+    } else {
+        return;
+    }
+    
+    sendNotification(title, message, { sound: true });
+
+    if (monitor.webhook_url) {
+        sendWebhook(monitor.webhook_url, 'ssl_expiring', {
+            ...monitor,
+            daysRemaining
+        });
+    }
+}
+
+export function notifySSLExpired(monitor) {
+    const displayName = monitor.name || monitor.url;
+    sendNotification(
+        '❌ SSL Certificate Expired',
+        `${displayName} certificate has expired!`,
+        { sound: true }
+    );
+
+    if (monitor.webhook_url) {
+        sendWebhook(monitor.webhook_url, 'ssl_expired', monitor);
+    }
+}
+
+export function notifySSLValid(monitor) {
+    const displayName = monitor.name || monitor.url;
+    sendNotification(
+        '✅ SSL Certificate Valid',
+        `${displayName} certificate is now valid`,
+        { sound: true }
+    );
+
+    if (monitor.webhook_url) {
+        sendWebhook(monitor.webhook_url, 'ssl_valid', monitor);
+    }
+}

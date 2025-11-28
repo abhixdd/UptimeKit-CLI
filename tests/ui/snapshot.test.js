@@ -108,7 +108,7 @@ const SSLMonitorRow = ({ monitor }) => {
     statusDisplay = <Text color="red" bold>✖ INVALID</Text>;
   }
 
-  const expiryDate = ssl.validTo ? new Date(ssl.validTo).toLocaleDateString() : 'Unknown';
+  const expiryDate = ssl.validTo ? new Date(ssl.validTo).toLocaleDateString('en-US') : 'Unknown';
   const issuer = ssl.issuer ? (ssl.issuer.length > 18 ? ssl.issuer.slice(0, 15) + '...' : ssl.issuer) : 'Unknown';
 
   return (

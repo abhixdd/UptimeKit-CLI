@@ -8,6 +8,7 @@ screenshots/
 # Development / tooling files
 .vscode/
 .git/
+.github/
 .gitignore
 .eslintrc*
 .prettier*
@@ -16,5 +17,9 @@ node_modules/
 *.log
 *.tmp
 
+# Tests (not needed in npm package)
+tests/
+jest.config.js
+coverage/
 
 CONTRIBUTING.md

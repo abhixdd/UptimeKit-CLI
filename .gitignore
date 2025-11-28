@@ -4,5 +4,7 @@ dist
 *.log
 *.pid
 .vscode
-.github
 uptimekit-rust
+
+# Test
+coverage

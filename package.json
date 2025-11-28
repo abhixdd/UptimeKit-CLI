@@ -27,7 +27,10 @@
     "prestart": "npm run build",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --no-colors",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch --no-colors",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --no-colors",
+    "test:update-snapshots": "node --experimental-vm-modules node_modules/jest/bin/jest.js --updateSnapshot --no-colors"
   },
   "keywords": [
     "cli",
@@ -58,6 +61,8 @@
     "@babel/cli": "^7.28.3",
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
-    "@babel/preset-react": "^7.28.5"
+    "@babel/preset-react": "^7.28.5",
+    "ink-testing-library": "^4.0.0",
+    "jest": "^30.2.0"
   }
 }

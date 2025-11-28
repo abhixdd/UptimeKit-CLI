@@ -148,12 +148,55 @@ docs: update installation instructions
 
 ## Testing
 
-Currently, UptimeKit uses manual testing. When adding features:
+UptimeKit uses Jest for testing with 180+ tests including unit tests and TUI snapshot tests.
 
-1. Test on multiple platforms (Windows, Linux, macOS if possible)
-2. Test edge cases
-3. Verify daemon behavior
-4. Check UI rendering
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (useful during development)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Update snapshots after intentional UI changes
+npm run test:update-snapshots
+```
+
+### Test Structure
+
+```
+tests/
+├── setup.js              # Test setup and cleanup
+├── commands/             # Command tests
+│   └── commands.test.js
+├── core/                 # Core module tests
+│   ├── db.test.js
+│   └── notifier.test.js
+├── ui/                   # UI snapshot tests
+│   ├── snapshot.test.js
+│   └── __snapshots__/
+└── utils/                # Helper function tests
+    └── helpers.test.js
+```
+
+### Writing Tests
+
+- **Unit tests**: Test individual functions in isolation using mocks
+- **Snapshot tests**: Capture TUI output to detect unintended UI changes
+- Run `npm test` before submitting PRs
+- Update snapshots only for intentional UI changes
+
+### When Adding Features
+
+1. Add tests for new functionality
+2. Run `npm test` to ensure all tests pass
+3. Test on multiple platforms if possible
+4. Verify daemon behavior
+5. Check UI rendering
 
 ## Reporting Issues
 

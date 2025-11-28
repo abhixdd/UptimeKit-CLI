@@ -9,6 +9,7 @@ import { registerClearCommand } from './commands/clear.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { createRequire } from 'module';
 import { registerResetCommand } from './commands/reset.js';
 import { registerEditCommand } from './commands/edit.js';
 import { registerNotificationsCommand } from './commands/notifications.js';
@@ -41,10 +42,13 @@ program.configureOutput({
   }
 });
 
+const requirePkg = createRequire(import.meta.url);
+const { version } = requirePkg('../package.json');
+
 program
   .name('uptimekit')
   .description('UptimeKit CLI - Monitor your services from the terminal')
-  .version('1.2.20', '-v, --version');
+  .version(version, '-v, --version');
 
 registerStartCommand(program);  // alias
 registerStopCommand(program);   // alias

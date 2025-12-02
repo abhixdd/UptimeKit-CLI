@@ -192,6 +192,9 @@ export default function MonitorDetail({ idOrName }) {
                             <Text color="cyan">{monitor.url}</Text>
                         </Box>
                         <Text color="gray" dimColor>Type: SSL Certificate • Interval: {monitor.interval}s</Text>
+                        {monitor.group_name && (
+                            <Text color="gray" dimColor>Group: <Text color="magenta">{monitor.group_name}</Text></Text>
+                        )}
                     </Box>
                     <Box flexDirection="column" alignItems="flex-end">
                         <Text color="gray" dimColor>ID: {monitor.id}</Text>
@@ -275,6 +278,9 @@ export default function MonitorDetail({ idOrName }) {
                         <Text color="cyan">{monitor.url}</Text>
                     </Box>
                     <Text color="gray" dimColor>Type: {monitor.type} • Interval: {monitor.interval}s</Text>
+                    {monitor.group_name && (
+                        <Text color="gray" dimColor>Group: <Text color="magenta">{monitor.group_name}</Text></Text>
+                    )}
                     {monitor.webhook_url && (
                         <Text color="gray" dimColor>
                             Webhook: {monitor.webhook_url.length > 50 ? monitor.webhook_url.substring(0, 47) + '...' : monitor.webhook_url}

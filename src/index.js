@@ -13,6 +13,7 @@ import { createRequire } from 'module';
 import { registerResetCommand } from './commands/reset.js';
 import { registerEditCommand } from './commands/edit.js';
 import { registerNotificationsCommand } from './commands/notifications.js';
+import { registerGroupCommand } from './commands/group.js';
 
 function isDaemonRunning() {
   const pidPath = path.join(os.homedir(), '.uptimekit', 'daemon.pid');
@@ -59,9 +60,10 @@ registerClearCommand(program);  // alias
 registerResetCommand(program);
 registerEditCommand(program);
 registerNotificationsCommand(program);
+registerGroupCommand(program);
 
 // gotta make sure the daemon is actually running
-const allowedIfNotRunning = ['help', 'start', '-v', '--version', '-h', '--help', 'reset', 'clear', 'notifications', 'notif'];
+const allowedIfNotRunning = ['help', 'start', '-v', '--version', '-h', '--help', 'reset', 'clear', 'notifications', 'notif', 'group', 'grp'];
 const userCmd = process.argv[2];
 if (!isDaemonRunning() && userCmd && !allowedIfNotRunning.includes(userCmd)) {
   console.log('UptimeKit is not running. Please start it first using "upkit start".');

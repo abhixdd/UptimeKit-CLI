@@ -27,6 +27,7 @@ export async function initDB() {
       port INTEGER,
       interval INTEGER NOT NULL,
       webhook_url TEXT,
+      group_name TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -41,6 +42,7 @@ export async function initDB() {
     
     CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
     CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name);
   `);
 
   // Migration: Ensure 'name' column exists
@@ -55,6 +57,14 @@ export async function initDB() {
     const hasWebhook = cols.some(c => c.name === 'webhook_url');
     if (!hasWebhook) {
       db.prepare('ALTER TABLE monitors ADD COLUMN webhook_url TEXT').run();
+    }
+
+    // Migration: Ensure 'group_name' column exists
+    const hasGroupName = cols.some(c => c.name === 'group_name');
+    if (!hasGroupName) {
+      db.prepare('ALTER TABLE monitors ADD COLUMN group_name TEXT').run();
+      // Create index for group_name if it doesn't exist
+      db.exec('CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name)');
     }
   } catch (err) {
     console.error('Database migration error:', err);
@@ -137,6 +147,7 @@ export function resetDB() {
       port INTEGER,
       interval INTEGER NOT NULL,
       webhook_url TEXT,
+      group_name TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -166,10 +177,11 @@ export function resetDB() {
     CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
     CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
     CREATE INDEX IF NOT EXISTS idx_ssl_certificates_monitor_id ON ssl_certificates(monitor_id);
+    CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name);
   `);
 }
 
-export function addMonitor(type, url, interval, name = null, webhookUrl = null) {
+export function addMonitor(type, url, interval, name = null, webhookUrl = null, groupName = null) {
   const db = getDB();
   if (name) {
     const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?)').get(name);
@@ -177,13 +189,13 @@ export function addMonitor(type, url, interval, name = null, webhookUrl = null) 
       throw new Error(`Monitor with name '${name}' already exists.`);
     }
   }
-  const stmt = db.prepare('INSERT INTO monitors (type, url, interval, name, webhook_url) VALUES (?, ?, ?, ?, ?)');
-  return stmt.run(type, url, interval, name, webhookUrl);
+  const stmt = db.prepare('INSERT INTO monitors (type, url, interval, name, webhook_url, group_name) VALUES (?, ?, ?, ?, ?, ?)');
+  return stmt.run(type, url, interval, name, webhookUrl, groupName);
 }
 
 export function updateMonitor(id, updates) {
   const db = getDB();
-  const { name, url, type, interval, webhook_url } = updates;
+  const { name, url, type, interval, webhook_url, group_name } = updates;
 
   if (name) {
     const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?) AND id != ?').get(name, id);
@@ -200,6 +212,7 @@ export function updateMonitor(id, updates) {
   if (type !== undefined) { fields.push('type = ?'); values.push(type); }
   if (interval !== undefined) { fields.push('interval = ?'); values.push(interval); }
   if (webhook_url !== undefined) { fields.push('webhook_url = ?'); values.push(webhook_url); }
+  if (group_name !== undefined) { fields.push('group_name = ?'); values.push(group_name); }
 
   if (fields.length === 0) return;
 
@@ -322,6 +335,7 @@ export function getStats() {
       type: row.type,
       url: row.url,
       interval: row.interval,
+      groupName: row.group_name,
       uptime: uptime,
       lastDowntime: lastDowntimeText,
       status: row.current_status || 'unknown',
@@ -385,4 +399,82 @@ export function getSSLCertificate(monitorId) {
 export function getAllSSLCertificates() {
   const db = getDB();
   return db.prepare('SELECT * FROM ssl_certificates').all();
+}
+
+// Group management functions
+
+export function getGroups() {
+  const db = getDB();
+  return db.prepare(`
+    SELECT group_name, COUNT(*) as count 
+    FROM monitors 
+    WHERE group_name IS NOT NULL AND group_name != '' 
+    GROUP BY group_name 
+    ORDER BY group_name
+  `).all();
+}
+
+
+export function groupExists(groupName) {
+  const db = getDB();
+  const result = db.prepare('SELECT 1 FROM monitors WHERE lower(group_name) = lower(?) LIMIT 1').get(groupName);
+  return !!result;
+}
+
+export function renameGroup(oldName, newName) {
+  const db = getDB();
+
+  if (!groupExists(oldName)) {
+    throw new Error(`Group '${oldName}' does not exist.`);
+  }
+  
+  const existingNew = db.prepare('SELECT 1 FROM monitors WHERE lower(group_name) = lower(?) AND lower(group_name) != lower(?) LIMIT 1').get(newName, oldName);
+  if (existingNew) {
+    throw new Error(`Group '${newName}' already exists.`);
+  }
+  
+  const stmt = db.prepare('UPDATE monitors SET group_name = ? WHERE lower(group_name) = lower(?)');
+  return stmt.run(newName, oldName);
+}
+
+export function deleteGroup(groupName, deleteMonitors = false) {
+  const db = getDB();
+  
+  if (!groupExists(groupName)) {
+    throw new Error(`Group '${groupName}' does not exist.`);
+  }
+  
+  if (deleteMonitors) {
+    db.prepare(`
+      DELETE FROM heartbeats 
+      WHERE monitor_id IN (SELECT id FROM monitors WHERE lower(group_name) = lower(?))
+    `).run(groupName);
+    
+    db.prepare(`
+      DELETE FROM ssl_certificates 
+      WHERE monitor_id IN (SELECT id FROM monitors WHERE lower(group_name) = lower(?))
+    `).run(groupName);
+
+    return db.prepare('DELETE FROM monitors WHERE lower(group_name) = lower(?)').run(groupName);
+  } else {
+    return db.prepare('UPDATE monitors SET group_name = NULL WHERE lower(group_name) = lower(?)').run(groupName);
+  }
+}
+
+export function getMonitorsByGroup(groupName) {
+  const db = getDB();
+  if (groupName === null || groupName === 'ungrouped') {
+    return db.prepare('SELECT * FROM monitors WHERE group_name IS NULL OR group_name = ""').all();
+  }
+  return db.prepare('SELECT * FROM monitors WHERE lower(group_name) = lower(?)').all(groupName);
+}
+
+export function getStatsByGroup(groupName) {
+  const allStats = getStats();
+  
+  if (groupName === null || groupName === 'ungrouped') {
+    return allStats.filter(s => !s.groupName || s.groupName === '');
+  }
+  
+  return allStats.filter(s => s.groupName && s.groupName.toLowerCase() === groupName.toLowerCase());
 }

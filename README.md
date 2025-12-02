@@ -28,11 +28,17 @@ upkit start
 # Add a monitor
 upkit add https://google.com -t http -i 30 -n "Google"
 
+# Add a monitor to a group
+upkit add https://api.dev.com -t http -i 30 -n "Dev API" -g dev
+
 # View dashboard
 upkit status
 
 # View detailed stats
 upkit status 1
+
+# View only monitors in a specific group
+upkit status -g dev
 ```
 
 ## Features
@@ -41,6 +47,7 @@ upkit status 1
 - **Live Dashboard** - Real-time TUI with status, latency, and uptime metrics
 - **Multi-Protocol** - HTTP/HTTPS, ICMP Ping, DNS, and SSL Certificate monitoring
 - **SSL Certificate Monitoring** - Track certificate expiration with alerts
+- **Monitor Grouping** - Organize monitors as you like
 - **Desktop Notifications** - Get notified when monitors go down or certificates expire
 - **Webhook Alerts** - Send status updates to custom webhook URLs
 - **Rich Metrics** - Latency sparklines, P95, status history timeline
@@ -81,6 +88,21 @@ uptimekit reset          # Reset the database
 upkit reset              # alias
 ```
 
+### Groups
+```bash
+uptimekit group          # List all groups
+upkit grp                # alias
+
+uptimekit group list     # List all groups with monitor counts
+upkit grp list           # alias
+
+uptimekit group rename <old> <new>  # Rename a group
+upkit grp rename <old> <new>        # alias
+
+uptimekit group delete <name>              # Delete group (ungroups monitors)
+upkit grp delete <name> --with-monitors    # Delete group and its monitors
+```
+
 ### Notifications
 ```bash
 uptimekit notif enable   # Enable desktop notifications
@@ -100,6 +122,11 @@ upkit notif status       # alias
 - `-n, --name` - Custom name
 - `-u, --url` - URL/Host (for `edit` command)
 - `-w, --webhook` - Webhook URL to receive status updates
+- `-g, --group` - Group name (use `none` to remove from group)
+
+### Options for `status`
+
+- `-g, --group` - Filter monitors by group name
 
 ## Monitor Types
 
@@ -121,6 +148,53 @@ upkit add google.com -t dns -i 60
 **SSL Certificate** - Certificate expiration monitoring
 ```bash
 upkit add example.com -t ssl -i 3600 -n "Example SSL"
+```
+
+## Monitor Grouping
+
+Organize your monitors into groups for better management. Groups are useful for separating monitors by environment (dev, staging, production) or by project.
+
+### Adding Monitors to Groups
+
+```bash
+# Add monitor to a group
+upkit add https://api.dev.com -t http -i 30 -n "Dev API" -g dev
+upkit add https://api.staging.com -t http -i 30 -n "Staging API" -g staging
+upkit add https://api.prod.com -t http -i 30 -n "Prod API" -g production
+```
+
+### Filtering by Group
+
+```bash
+# View only monitors in a specific group
+upkit status -g dev
+upkit status -g production
+```
+
+### Managing Groups
+
+```bash
+# List all groups with monitor counts
+upkit group
+
+# Rename a group
+upkit group rename dev development
+
+# Delete a group (monitors become ungrouped)
+upkit group delete old-group
+
+# Delete a group AND all its monitors
+upkit group delete test-group --with-monitors
+```
+
+### Editing Monitor Groups
+
+```bash
+# Change a monitor's group
+upkit edit my-monitor -g production
+
+# Remove a monitor from its group
+upkit edit my-monitor -g none
 ```
 
 ## Webhooks
@@ -176,8 +250,21 @@ upkit add github.com -t dns -i 60 -n "GitHub DNS"
 # Monitor SSL certificate expiration (check every hour)
 upkit add mysite.com -t ssl -i 3600 -n "My Site SSL"
 
+# Add monitors to groups
+upkit add https://api.dev.com -t http -i 30 -n "Dev API" -g dev
+upkit add https://api.prod.com -t http -i 30 -n "Prod API" -g production
+
 # View all monitors
 upkit st
+
+# View only production monitors
+upkit st -g production
+
+# List all groups
+upkit group
+
+# Move monitor to different group
+upkit edit 1 -g staging
 
 # View detailed stats for monitor #1
 upkit st 1
@@ -200,8 +287,9 @@ The dashboard shows:
 - Current latency
 - 24-hour uptime percentage
 - Last downtime
+- Group name (if assigned)
 
-SSL monitors are displayed in a separate table showing:
+Monitors are organized by group, with each group displayed in its own section. SSL monitors are displayed in a separate table showing:
 
 - Certificate validity status
 - Days remaining until expiration
@@ -216,6 +304,7 @@ The detail view includes:
 - Latency sparkline (last 60 seconds)
 - Current, average, and P95 latency
 - 24-hour uptime percentage
+- Group name (if assigned)
 - Configured webhook URL (if set)
 
 For SSL monitors, the detail view shows:

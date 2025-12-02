@@ -5,10 +5,11 @@ import readline from 'readline';
 
 const MonitorSchema = z.object({
     url: z.string().min(1).optional(),
-    type: z.enum(['http', 'icmp', 'dns']).optional(),
+    type: z.enum(['http', 'icmp', 'dns', 'ssl']).optional(),
     interval: z.number().min(1).optional(),
     name: z.string().optional(),
-    webhook_url: z.string().nullable().optional()
+    webhook_url: z.string().nullable().optional(),
+    group_name: z.string().nullable().optional()
 });
 
 export function registerEditCommand(program) {
@@ -16,10 +17,11 @@ export function registerEditCommand(program) {
         .command('edit <idOrName>')
         .description('Edit an existing monitor')
         .option('-u, --url <url>', 'New URL')
-        .option('-t, --type <type>', 'New type (http, icmp, dns)')
+        .option('-t, --type <type>', 'New type (http, icmp, dns, ssl)')
         .option('-i, --interval <seconds>', 'New interval in seconds')
         .option('-n, --name <name>', 'New name')
         .option('-w, --webhook <url>', 'New webhook URL')
+        .option('-g, --group <group>', 'New group name (use "none" to remove from group)')
         .action(async (idOrName, options) => {
             try {
                 await initDB();
@@ -38,6 +40,9 @@ export function registerEditCommand(program) {
                 if (options.interval) updates.interval = parseInt(options.interval, 10);
                 if (options.name) updates.name = options.name;
                 if (options.webhook) updates.webhook_url = options.webhook;
+                if (options.group !== undefined) {
+                    updates.group_name = options.group.toLowerCase() === 'none' ? null : options.group;
+                }
 
                 // If no flags provided, go interactive
                 if (Object.keys(updates).length === 0) {
@@ -63,6 +68,12 @@ export function registerEditCommand(program) {
                     const newWebhook = await question(`Webhook URL [${currentWebhook}]: `);
                     if (newWebhook.trim()) {
                         updates.webhook_url = newWebhook.trim() === 'none' ? null : newWebhook.trim();
+                    }
+
+                    const currentGroup = monitor.group_name || 'none';
+                    const newGroup = await question(`Group [${currentGroup}]: `);
+                    if (newGroup.trim()) {
+                        updates.group_name = newGroup.trim().toLowerCase() === 'none' ? null : newGroup.trim();
                     }
 
                     rl.close();

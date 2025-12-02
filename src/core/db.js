@@ -39,72 +39,61 @@ export async function initDB() {
       timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
     );
-    
-    CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
-    CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name);
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS ssl_certificates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      monitor_id INTEGER NOT NULL UNIQUE,
+      issuer TEXT,
+      subject TEXT,
+      valid_from TEXT,
+      valid_to TEXT,
+      days_remaining INTEGER,
+      serial_number TEXT,
+      fingerprint TEXT,
+      last_checked TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
+    );
   `);
 
-  // Migration: Ensure 'name' column exists
+
   try {
     const cols = db.prepare("PRAGMA table_info('monitors')").all();
-    const hasName = cols.some(c => c.name === 'name');
-    if (!hasName) {
+    
+
+    if (!cols.some(c => c.name === 'name')) {
       db.prepare('ALTER TABLE monitors ADD COLUMN name TEXT').run();
     }
 
-    // Migration: Ensure 'webhook_url' column exists
-    const hasWebhook = cols.some(c => c.name === 'webhook_url');
-    if (!hasWebhook) {
+    if (!cols.some(c => c.name === 'webhook_url')) {
       db.prepare('ALTER TABLE monitors ADD COLUMN webhook_url TEXT').run();
     }
 
-    // Migration: Ensure 'group_name' column exists
-    const hasGroupName = cols.some(c => c.name === 'group_name');
-    if (!hasGroupName) {
+    if (!cols.some(c => c.name === 'group_name')) {
       db.prepare('ALTER TABLE monitors ADD COLUMN group_name TEXT').run();
-      // Create index for group_name if it doesn't exist
-      db.exec('CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name)');
     }
   } catch (err) {
-    console.error('Database migration error:', err);
+    console.error('Database column migration error:', err);
   }
 
-  // Migration: Ensure 'settings' table exists
   try {
     db.exec(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      );
+      CREATE INDEX IF NOT EXISTS idx_heartbeats_monitor_id ON heartbeats(monitor_id);
+      CREATE INDEX IF NOT EXISTS idx_heartbeats_timestamp ON heartbeats(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_ssl_certificates_monitor_id ON ssl_certificates(monitor_id);
+      CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name);
     `);
-
-    // Set default notification setting (enabled by default)
+  } catch (err) {
+    console.error('Database index creation error:', err);
+  }
+  try {
     db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('notifications_enabled', '1')").run();
   } catch (err) {
-    console.error('Settings table migration error:', err);
-  }
-
-  // Migration: Ensure 'ssl_certificates' table exists
-  try {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS ssl_certificates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        monitor_id INTEGER NOT NULL UNIQUE,
-        issuer TEXT,
-        subject TEXT,
-        valid_from TEXT,
-        valid_to TEXT,
-        days_remaining INTEGER,
-        serial_number TEXT,
-        fingerprint TEXT,
-        last_checked TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (monitor_id) REFERENCES monitors (id) ON DELETE CASCADE
-      );
-      CREATE INDEX IF NOT EXISTS idx_ssl_certificates_monitor_id ON ssl_certificates(monitor_id);
-    `);
-  } catch (err) {
-    console.error('SSL certificates table migration error:', err);
+    console.error('Settings initialization error:', err);
   }
 
   // Prune old data on startup

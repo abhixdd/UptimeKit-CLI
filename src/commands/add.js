@@ -13,11 +13,12 @@ export function registerAddCommand(program) {
   program
     .command('add <url>')
     .description('Add a new monitor')
-    .addHelpText('after', '\n\nExamples:\n  uptimekit add https://example2.com -t http -i 30 -n newsite\n  uptimekit add google.com -t dns -i 60 -n googledns\n  uptimekit add example.com -t ssl -i 3600 -n myssl\n')
+    .addHelpText('after', '\n\nExamples:\n  uptimekit add https://example2.com -t http -i 30 -n newsite\n  uptimekit add google.com -t dns -i 60 -n googledns\n  uptimekit add example.com -t ssl -i 3600 -n myssl\n  uptimekit add https://api.dev.com -t http -i 30 -n "dev-api" -g dev\n')
     .option('-t, --type <type>', 'Type of monitor (http, icmp, dns, ssl)')
     .option('-i, --interval <seconds>', 'Check interval in seconds', '60')
     .option('-n, --name <name>', 'Custom name for monitor')
     .option('-w, --webhook <url>', 'Webhook URL for notifications')
+    .option('-g, --group <group>', 'Group name for organizing monitors (e.g., dev, prod, staging)')
     .action(async (url, options, cmd) => {
       try {
         const allowedTypes = ['http', 'icmp', 'dns', 'ssl'];
@@ -152,8 +153,14 @@ export function registerAddCommand(program) {
           }
         }
 
-        addMonitor(data.type, data.url, data.interval, name, options.webhook);
-        console.log(chalk.green(`Monitor added: ${name} (${data.url}, ${data.type})`));
+        const groupName = options.group || null;
+        addMonitor(data.type, data.url, data.interval, name, options.webhook, groupName);
+        
+        let successMsg = `Monitor added: ${name} (${data.url}, ${data.type})`;
+        if (groupName) {
+          successMsg += ` [Group: ${groupName}]`;
+        }
+        console.log(chalk.green(successMsg));
       } catch (err) {
         if (err instanceof z.ZodError) {
           console.error(chalk.red('Validation Error:'));

@@ -7,12 +7,13 @@ exports[`Dashboard Component Snapshots should maintain consistent column widths 
 │                                                                                                  │
 │ Uptime Monitors                                                                                  │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name          URL             Type   Status  Latency Uptime     Last Downtime           │ │
-│ │                                                           (24h)                              │ │
+│ │ #   Name         Group    URL            Type   Status Latency Uptime    Last Downtime       │ │
+│ │                                                                (24h)                         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    VeryLongMonitovery-long-...pl http   ✔ UP    100ms   99.99%     None                    │ │
-│ │      rNameThatShoule.com                                                                     │ │
-│ │      dBeTruncated                                                                            │ │
+│ │ 1   VeryLongMoni -        very-long...le.http   ✔ UP   100ms   99.99%    None                │ │
+│ │     torNameThatS          com                                                                │ │
+│ │     houldBeTrunc                                                                             │ │
+│ │     ated                                                                                     │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 │                                                                                                  │
@@ -68,13 +69,13 @@ exports[`Dashboard Component Snapshots should render mixed regular and SSL monit
 │                                                                                                  │
 │ Uptime Monitors                                                                                  │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name          URL             Type   Status  Latency Uptime     Last Downtime           │ │
-│ │                                                           (24h)                              │ │
+│ │ #   Name         Group    URL            Type   Status Latency Uptime    Last Downtime       │ │
+│ │                                                                (24h)                         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Main Site     mainsite.com    http   ✔ UP    95ms    99.95%     None                    │ │
+│ │ 1   Main Site    -        mainsite.com   http   ✔ UP   95ms    99.95%    None                │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 2    API Server    api.mainsite.co http   ✔ UP    45ms    99.90%     1 day ago               │ │
-│ │                    m                                                                         │ │
+│ │ 2   API Server   -        api.mainsite.cohttp   ✔ UP   45ms    99.90%    1 day ago           │ │
+│ │                           m                                                                  │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 │ SSL Certificate Monitors                                                                         │
@@ -109,14 +110,14 @@ exports[`Dashboard Component Snapshots should render with multiple monitors (mix
 │                                                                                                  │
 │ Uptime Monitors                                                                                  │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name          URL             Type   Status  Latency Uptime     Last Downtime           │ │
-│ │                                                           (24h)                              │ │
+│ │ #   Name         Group    URL            Type   Status Latency Uptime    Last Downtime       │ │
+│ │                                                                (24h)                         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Website       example.com     http   ✔ UP    120ms   99.99%     None                    │ │
+│ │ 1   Website      -        example.com    http   ✔ UP   120ms   99.99%    None                │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 2    Google DNS    8.8.8.8         icmp   ✔ UP    25ms    100.00%    None                    │ │
+│ │ 2   Google DNS   -        8.8.8.8        icmp   ✔ UP   25ms    100.00%   None                │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 3    DNS Check     google.com      dns    ✔ UP    45ms    99.80%     2 hours ago             │ │
+│ │ 3   DNS Check    -        google.com     dns    ✔ UP   45ms    99.80%    2 hours ago         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 │                                                                                                  │
@@ -130,10 +131,10 @@ exports[`Dashboard Component Snapshots should render with single HTTP monitor DO
 │                                                                                                  │
 │ Uptime Monitors                                                                                  │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name          URL             Type   Status  Latency Uptime     Last Downtime           │ │
-│ │                                                           (24h)                              │ │
+│ │ #   Name         Group    URL            Type   Status Latency Uptime    Last Downtime       │ │
+│ │                                                                (24h)                         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Example       example.com     http   ✖ DOWN  0ms     85.00%     5 minutes ago           │ │
+│ │ 1   Example      -        example.com    http   ✖ DOWN 0ms     85.00%    5 minutes ago       │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 │                                                                                                  │
@@ -147,10 +148,10 @@ exports[`Dashboard Component Snapshots should render with single HTTP monitor UP
 │                                                                                                  │
 │ Uptime Monitors                                                                                  │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name          URL             Type   Status  Latency Uptime     Last Downtime           │ │
-│ │                                                           (24h)                              │ │
+│ │ #   Name         Group    URL            Type   Status Latency Uptime    Last Downtime       │ │
+│ │                                                                (24h)                         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Example       example.com     http   ✔ UP    150ms   99.50%     None                    │ │
+│ │ 1   Example      -        example.com    http   ✔ UP   150ms   99.50%    None                │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 │                                                                                                  │
@@ -164,14 +165,14 @@ exports[`Dashboard Component Snapshots should show correct counts in header (up/
 │                                                                                                  │
 │ Uptime Monitors                                                                                  │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name          URL             Type   Status  Latency Uptime     Last Downtime           │ │
-│ │                                                           (24h)                              │ │
+│ │ #   Name         Group    URL            Type   Status Latency Uptime    Last Downtime       │ │
+│ │                                                                (24h)                         │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Up1           up1.com         http   ✔ UP    100ms   100%       None                    │ │
+│ │ 1   Up1          -        up1.com        http   ✔ UP   100ms   100%      None                │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 2    Up2           up2.com         http   ✔ UP    100ms   100%       None                    │ │
+│ │ 2   Up2          -        up2.com        http   ✔ UP   100ms   100%      None                │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 3    Down1         down1.com       http   ✖ DOWN  0ms     50%        now                     │ │
+│ │ 3   Down1        -        down1.com      http   ✖ DOWN 0ms     50%       now                 │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 │                                                                                                  │
@@ -219,6 +220,29 @@ exports[`MonitorDetail Component Snapshots should render HTTP monitor detail - o
 │ │ 140 ms           │ │ 119 ms               │ │ 160 ms              │ │ 80.00%                │  │
 │ └──────────────────┘ └──────────────────────┘ └─────────────────────┘ └───────────────────────┘  │
 │                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
+`;
+
+exports[`MonitorDetail Component Snapshots should render HTTP monitor detail with group name 1`] = `
+"╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                  │
+│   ONLINE   Dev API                                                                        ID: 11 │
+│                                                                                Press 'q' to quit │
+│ https://api.dev.example.com                                                                      │
+│ Type: http • Interval: 30s                                                                       │
+│ Group: development                                                                               │
+│                                                                                                  │
+│ Recent Checks (Last 40)                                                                          │
+│ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ ■■■                                                                                          │ │
+│ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                  │
+│ ┌──────────────────┐ ┌──────────────────────┐ ┌─────────────────────┐ ┌───────────────────────┐  │
+│ │ Current          │ │ Avg Latency          │ │ Max Latency         │ │ Uptime (24h)          │  │
+│ │ 125 ms           │ │ 120 ms               │ │ 125 ms              │ │ 100.00%               │  │
+│ └──────────────────┘ └──────────────────────┘ └─────────────────────┘ └───────────────────────┘  │
 │                                                                                                  │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
@@ -358,6 +382,38 @@ exports[`MonitorDetail Component Snapshots should render SSL monitor detail - va
 │ │ SSL Certificate Details                                                                      │ │
 │ │                                                                                              │ │
 │ │ Subject:          github.com                                                                 │ │
+│ │ Issuer:           DigiCert Inc                                                               │ │
+│ │ Days Remaining:   79 days                                                                    │ │
+│ │                                                                                              │ │
+│ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                  │
+│ ┌──────────────────────────────────────────────┐ ┌────────────────────────────────────────────┐  │
+│ │ Days Remaining                               │ │ Validity Rate                              │  │
+│ │ 79 days                                      │ │ 100.00%                                    │  │
+│ └──────────────────────────────────────────────┘ └────────────────────────────────────────────┘  │
+│                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
+`;
+
+exports[`MonitorDetail Component Snapshots should render SSL monitor detail with group name 1`] = `
+"╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                  │
+│   VALID    Prod SSL                                                                       ID: 12 │
+│                                                                                Press 'q' to quit │
+│ prod.example.com                                                                                 │
+│ Type: SSL Certificate • Interval: 3600s                                                          │
+│ Group: production                                                                                │
+│                                                                                                  │
+│ Certificate Status History (Last 40 checks)                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ ■■                                                                                           │ │
+│ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                  │
+│ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │                                                                                              │ │
+│ │ SSL Certificate Details                                                                      │ │
+│ │                                                                                              │ │
+│ │ Subject:          prod.example.com                                                           │ │
 │ │ Issuer:           DigiCert Inc                                                               │ │
 │ │ Days Remaining:   79 days                                                                    │ │
 │ │                                                                                              │ │

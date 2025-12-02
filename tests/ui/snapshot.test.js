@@ -16,9 +16,14 @@ const StatBox = ({ label, value, color = "white" }) => (
 );
 
 // Dashboard Header component
-const DashboardHeader = ({ upCount, downCount }) => (
+const DashboardHeader = ({ upCount, downCount, groupFilter = null }) => (
   <Box marginBottom={1}>
     <Text bold color="cyan">UptimeKit Dashboard</Text>
+    {groupFilter && (
+      <Box marginLeft={2}>
+        <Text color="yellow">Group: {groupFilter}</Text>
+      </Box>
+    )}
     <Box marginLeft={2}>
       <Text color="green">● {upCount} Up</Text>
     </Box>
@@ -45,28 +50,31 @@ const MonitorRow = ({ monitor }) => {
     if (!displayName) displayName = host;
   }
 
-  if (displayUrl.length > 20) {
-    displayUrl = displayUrl.slice(0, 10) + '...' + displayUrl.slice(-7);
+  if (displayUrl.length > 18) {
+    displayUrl = displayUrl.slice(0, 9) + '...' + displayUrl.slice(-6);
   }
+
+  const displayGroup = monitor.groupName || '-';
 
   return (
     <Box borderStyle="single" borderColor="gray" borderTop={false} paddingX={1}>
-      <Box width="6%"><Text>{monitor.id}</Text></Box>
-      <Box width="19%"><Text>{displayName}</Text></Box>
-      <Box width="20%"><Text>{displayUrl}</Text></Box>
-      <Box width="10%"><Text>{monitor.type}</Text></Box>
-      <Box width="10%">
+      <Box width="5%"><Text>{monitor.id}</Text></Box>
+      <Box width="15%"><Text>{displayName}</Text></Box>
+      <Box width="10%"><Text color="cyan">{displayGroup}</Text></Box>
+      <Box width="18%"><Text>{displayUrl}</Text></Box>
+      <Box width="8%"><Text>{monitor.type}</Text></Box>
+      <Box width="9%">
         <Text color={monitor.status === 'up' ? 'green' : 'red'} bold>
           {monitor.status === 'up' ? '✔ UP' : '✖ DOWN'}
         </Text>
       </Box>
-      <Box width="10%">
+      <Box width="9%">
         <Text color={monitor.latency > 500 ? 'yellow' : 'green'}>{monitor.latency}ms</Text>
       </Box>
-      <Box width="15%">
+      <Box width="12%">
         <Text color={parseFloat(monitor.uptime) > 99 ? 'green' : 'yellow'}>{monitor.uptime}%</Text>
       </Box>
-      <Box width="30%">
+      <Box width="22%">
         <Text color="gray">{monitor.lastDowntime === 'No downtime' ? 'None' : monitor.lastDowntime}</Text>
       </Box>
     </Box>
@@ -127,7 +135,7 @@ const SSLMonitorRow = ({ monitor }) => {
 };
 
 // Dashboard View for testing
-const SimpleDashboard = ({ monitors = [] }) => {
+const SimpleDashboard = ({ monitors = [], groupFilter = null, groups = [] }) => {
   const regularMonitors = monitors.filter(m => m.type !== 'ssl');
   const sslMonitors = monitors.filter(m => m.type === 'ssl');
 
@@ -136,20 +144,35 @@ const SimpleDashboard = ({ monitors = [] }) => {
       <DashboardHeader 
         upCount={monitors.filter(m => m.status === 'up').length}
         downCount={monitors.filter(m => m.status !== 'up').length}
+        groupFilter={groupFilter}
       />
+
+      {/* Show available groups if not filtering */}
+      {!groupFilter && groups.length > 0 && (
+        <Box marginBottom={1}>
+          <Text color="gray">Groups: </Text>
+          {groups.map((g, idx) => (
+            <Text key={g.group_name} color="cyan">
+              {g.group_name} ({g.count}){idx < groups.length - 1 ? ', ' : ''}
+            </Text>
+          ))}
+          <Text color="gray"> | Use -g &lt;group&gt; to filter</Text>
+        </Box>
+      )}
 
       {regularMonitors.length > 0 && (
         <Box flexDirection="column" marginBottom={1}>
           <Text bold color="white" marginBottom={1}>Uptime Monitors</Text>
           <Box borderStyle="single" borderColor="gray" paddingX={1}>
-            <Box width="6%"><Text bold color="blue">#</Text></Box>
-            <Box width="19%"><Text bold color="blue">Name</Text></Box>
-            <Box width="20%"><Text bold color="blue">URL</Text></Box>
-            <Box width="10%"><Text bold color="blue">Type</Text></Box>
-            <Box width="10%"><Text bold color="blue">Status</Text></Box>
-            <Box width="10%"><Text bold color="blue">Latency</Text></Box>
-            <Box width="15%"><Text bold color="blue">Uptime (24h)</Text></Box>
-            <Box width="30%"><Text bold color="blue">Last Downtime</Text></Box>
+            <Box width="5%"><Text bold color="blue">#</Text></Box>
+            <Box width="15%"><Text bold color="blue">Name</Text></Box>
+            <Box width="10%"><Text bold color="blue">Group</Text></Box>
+            <Box width="18%"><Text bold color="blue">URL</Text></Box>
+            <Box width="8%"><Text bold color="blue">Type</Text></Box>
+            <Box width="9%"><Text bold color="blue">Status</Text></Box>
+            <Box width="9%"><Text bold color="blue">Latency</Text></Box>
+            <Box width="12%"><Text bold color="blue">Uptime (24h)</Text></Box>
+            <Box width="22%"><Text bold color="blue">Last Downtime</Text></Box>
           </Box>
           {regularMonitors.map((m) => <MonitorRow key={m.id} monitor={m} />)}
         </Box>
@@ -265,6 +288,9 @@ const SimpleMonitorDetail = ({ monitor, heartbeats = [], sslCert = null, notFoun
               <Text color="cyan">{monitor.url}</Text>
             </Box>
             <Text color="gray" dimColor>Type: SSL Certificate • Interval: {monitor.interval}s</Text>
+            {monitor.group_name && (
+              <Text color="gray" dimColor>Group: <Text color="magenta">{monitor.group_name}</Text></Text>
+            )}
           </Box>
           <Box flexDirection="column" alignItems="flex-end">
             <Text color="gray" dimColor>ID: {monitor.id}</Text>
@@ -323,6 +349,9 @@ const SimpleMonitorDetail = ({ monitor, heartbeats = [], sslCert = null, notFoun
             <Text color="cyan">{monitor.url}</Text>
           </Box>
           <Text color="gray" dimColor>Type: {monitor.type} • Interval: {monitor.interval}s</Text>
+          {monitor.group_name && (
+            <Text color="gray" dimColor>Group: <Text color="magenta">{monitor.group_name}</Text></Text>
+          )}
           {monitor.webhook_url && (
             <Text color="gray" dimColor>
               Webhook: {monitor.webhook_url.length > 50 ? monitor.webhook_url.substring(0, 47) + '...' : monitor.webhook_url}
@@ -706,6 +735,54 @@ describe('MonitorDetail Component Snapshots', () => {
     ];
     
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
+    expect(lastFrame()).toMatchSnapshot();
+    unmount();
+  });
+
+  it('should render HTTP monitor detail with group name', () => {
+    const monitor = {
+      id: 11,
+      name: 'Dev API',
+      type: 'http',
+      url: 'https://api.dev.example.com',
+      interval: 30,
+      webhook_url: null,
+      group_name: 'development'
+    };
+    const heartbeats = [
+      { status: 'up', timestamp: '2024-11-28 12:00:00', latency: 120 },
+      { status: 'up', timestamp: '2024-11-28 11:59:30', latency: 115 },
+      { status: 'up', timestamp: '2024-11-28 11:59:00', latency: 125 },
+    ];
+    
+    const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
+    expect(lastFrame()).toMatchSnapshot();
+    unmount();
+  });
+
+  it('should render SSL monitor detail with group name', () => {
+    const monitor = {
+      id: 12,
+      name: 'Prod SSL',
+      type: 'ssl',
+      url: 'prod.example.com',
+      interval: 3600,
+      webhook_url: null,
+      group_name: 'production'
+    };
+    const heartbeats = [
+      { status: 'up', timestamp: '2024-11-28 12:00:00', latency: 200 },
+      { status: 'up', timestamp: '2024-11-28 11:00:00', latency: 195 },
+    ];
+    const sslCert = {
+      issuer: 'DigiCert Inc',
+      subject: 'prod.example.com',
+      valid_from: '2024-01-15',
+      valid_to: '2025-02-15',
+      days_remaining: 79
+    };
+    
+    const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} sslCert={sslCert} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
   });

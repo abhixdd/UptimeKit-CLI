@@ -8,11 +8,12 @@ export function registerStatusCommand(program) {
     .command('status [idOrName]')
     .alias('st')
     .description('View status dashboard or details for a specific monitor')
-    .action((idOrName) => {
+    .option('-g, --group <group>', 'Filter monitors by group name (e.g., dev, prod)')
+    .action((idOrName, options) => {
       if (idOrName) {
         render(<MonitorDetail idOrName={idOrName} />);
       } else {
-        render(<Dashboard />);
+        render(<Dashboard groupFilter={options.group || null} />);
       }
     });
 }

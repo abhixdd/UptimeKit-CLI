@@ -18,6 +18,7 @@ function setupTestDb() {
       interval INTEGER DEFAULT 60,
       name TEXT,
       webhook_url TEXT,
+      group_name TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS heartbeats (
@@ -44,6 +45,7 @@ function setupTestDb() {
       last_checked TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (monitor_id) REFERENCES monitors(id)
     );
+    CREATE INDEX IF NOT EXISTS idx_monitors_group_name ON monitors(group_name);
   `);
   return testDb;
 }
@@ -710,5 +712,324 @@ describe('Webhook URL Validation', () => {
     const input = 'none';
     const webhook = input.trim() === 'none' ? null : input.trim();
     expect(webhook).toBeNull();
+  });
+});
+
+describe('Group Command Logic', () => {
+  let db;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE monitors (
+        id INTEGER PRIMARY KEY, 
+        name TEXT, 
+        url TEXT, 
+        type TEXT,
+        interval INTEGER,
+        group_name TEXT
+      );
+      CREATE TABLE heartbeats (
+        id INTEGER PRIMARY KEY, 
+        monitor_id INTEGER
+      );
+      CREATE TABLE ssl_certificates (
+        id INTEGER PRIMARY KEY,
+        monitor_id INTEGER UNIQUE
+      );
+      CREATE INDEX idx_monitors_group_name ON monitors(group_name);
+    `);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  describe('getGroups', () => {
+    it('should return empty array when no groups exist', () => {
+      const groups = db.prepare(`
+        SELECT group_name, COUNT(*) as count 
+        FROM monitors 
+        WHERE group_name IS NOT NULL AND group_name != '' 
+        GROUP BY group_name
+      `).all();
+      expect(groups).toEqual([]);
+    });
+
+    it('should return groups with counts', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('dev1', 'https://dev1.com', 'http', 60, 'dev');
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('dev2', 'https://dev2.com', 'http', 60, 'dev');
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('prod1', 'https://prod1.com', 'http', 60, 'prod');
+
+      const groups = db.prepare(`
+        SELECT group_name, COUNT(*) as count 
+        FROM monitors 
+        WHERE group_name IS NOT NULL AND group_name != '' 
+        GROUP BY group_name 
+        ORDER BY group_name
+      `).all();
+
+      expect(groups).toHaveLength(2);
+      expect(groups[0]).toEqual({ group_name: 'dev', count: 2 });
+      expect(groups[1]).toEqual({ group_name: 'prod', count: 1 });
+    });
+
+    it('should not include ungrouped monitors in groups', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('grouped', 'https://grouped.com', 'http', 60, 'dev');
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('ungrouped', 'https://ungrouped.com', 'http', 60, null);
+
+      const groups = db.prepare(`
+        SELECT group_name, COUNT(*) as count 
+        FROM monitors 
+        WHERE group_name IS NOT NULL AND group_name != '' 
+        GROUP BY group_name
+      `).all();
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].count).toBe(1);
+    });
+  });
+
+  describe('groupExists', () => {
+    it('should return true for existing group', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('test', 'https://test.com', 'http', 60, 'dev');
+
+      const exists = db.prepare('SELECT 1 FROM monitors WHERE lower(group_name) = lower(?) LIMIT 1').get('dev');
+      expect(!!exists).toBe(true);
+    });
+
+    it('should return true case-insensitively', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('test', 'https://test.com', 'http', 60, 'dev');
+
+      const exists = db.prepare('SELECT 1 FROM monitors WHERE lower(group_name) = lower(?) LIMIT 1').get('DEV');
+      expect(!!exists).toBe(true);
+    });
+
+    it('should return false for non-existing group', () => {
+      const exists = db.prepare('SELECT 1 FROM monitors WHERE lower(group_name) = lower(?) LIMIT 1').get('nonexistent');
+      expect(!!exists).toBe(false);
+    });
+  });
+
+  describe('renameGroup', () => {
+    it('should rename all monitors in a group', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('dev1', 'https://dev1.com', 'http', 60, 'dev');
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('dev2', 'https://dev2.com', 'http', 60, 'dev');
+
+      const result = db.prepare('UPDATE monitors SET group_name = ? WHERE lower(group_name) = lower(?)').run('development', 'dev');
+      expect(result.changes).toBe(2);
+
+      const monitors = db.prepare('SELECT * FROM monitors WHERE group_name = ?').all('development');
+      expect(monitors).toHaveLength(2);
+    });
+
+    it('should handle case change in group name', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('test', 'https://test.com', 'http', 60, 'dev');
+
+      db.prepare('UPDATE monitors SET group_name = ? WHERE lower(group_name) = lower(?)').run('Dev', 'dev');
+
+      const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('test');
+      expect(monitor.group_name).toBe('Dev');
+    });
+  });
+
+  describe('deleteGroup', () => {
+    it('should ungroup monitors when deleteMonitors is false', () => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('test', 'https://test.com', 'http', 60, 'dev');
+
+      db.prepare('UPDATE monitors SET group_name = NULL WHERE lower(group_name) = lower(?)').run('dev');
+
+      const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('test');
+      expect(monitor.group_name).toBeNull();
+    });
+
+    it('should delete monitors when deleteMonitors is true', () => {
+      const result = db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('test', 'https://test.com', 'http', 60, 'dev');
+      db.prepare('INSERT INTO heartbeats (monitor_id) VALUES (?)').run(result.lastInsertRowid);
+
+      db.prepare('DELETE FROM heartbeats WHERE monitor_id IN (SELECT id FROM monitors WHERE lower(group_name) = lower(?))').run('dev');
+      db.prepare('DELETE FROM monitors WHERE lower(group_name) = lower(?)').run('dev');
+
+      const monitors = db.prepare('SELECT * FROM monitors').all();
+      const heartbeats = db.prepare('SELECT * FROM heartbeats').all();
+      expect(monitors).toHaveLength(0);
+      expect(heartbeats).toHaveLength(0);
+    });
+  });
+
+  describe('getMonitorsByGroup', () => {
+    beforeEach(() => {
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('dev1', 'https://dev1.com', 'http', 60, 'dev');
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('prod1', 'https://prod1.com', 'http', 60, 'prod');
+      db.prepare('INSERT INTO monitors (name, url, type, interval, group_name) VALUES (?, ?, ?, ?, ?)')
+        .run('ungrouped', 'https://ungrouped.com', 'http', 60, null);
+    });
+
+    it('should return monitors in a specific group', () => {
+      const monitors = db.prepare('SELECT * FROM monitors WHERE lower(group_name) = lower(?)').all('dev');
+      expect(monitors).toHaveLength(1);
+      expect(monitors[0].name).toBe('dev1');
+    });
+
+    it('should return ungrouped monitors', () => {
+      const monitors = db.prepare("SELECT * FROM monitors WHERE group_name IS NULL OR group_name = ''").all();
+      expect(monitors).toHaveLength(1);
+      expect(monitors[0].name).toBe('ungrouped');
+    });
+
+    it('should be case-insensitive', () => {
+      const monitors = db.prepare('SELECT * FROM monitors WHERE lower(group_name) = lower(?)').all('DEV');
+      expect(monitors).toHaveLength(1);
+    });
+  });
+});
+
+describe('Add Monitor with Group', () => {
+  let db;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE monitors (
+        id INTEGER PRIMARY KEY,
+        type TEXT NOT NULL,
+        url TEXT NOT NULL,
+        interval INTEGER DEFAULT 60,
+        name TEXT,
+        webhook_url TEXT,
+        group_name TEXT
+      );
+    `);
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('should add monitor with group', () => {
+    db.prepare('INSERT INTO monitors (type, url, interval, name, group_name) VALUES (?, ?, ?, ?, ?)')
+      .run('http', 'https://dev.example.com', 60, 'dev-api', 'dev');
+
+    const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('dev-api');
+    expect(monitor.group_name).toBe('dev');
+  });
+
+  it('should add monitor without group', () => {
+    db.prepare('INSERT INTO monitors (type, url, interval, name, group_name) VALUES (?, ?, ?, ?, ?)')
+      .run('http', 'https://example.com', 60, 'api', null);
+
+    const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('api');
+    expect(monitor.group_name).toBeNull();
+  });
+
+  it('should allow same group for multiple monitors', () => {
+    db.prepare('INSERT INTO monitors (type, url, interval, name, group_name) VALUES (?, ?, ?, ?, ?)')
+      .run('http', 'https://dev1.com', 60, 'dev1', 'dev');
+    db.prepare('INSERT INTO monitors (type, url, interval, name, group_name) VALUES (?, ?, ?, ?, ?)')
+      .run('http', 'https://dev2.com', 60, 'dev2', 'dev');
+    db.prepare('INSERT INTO monitors (type, url, interval, name, group_name) VALUES (?, ?, ?, ?, ?)')
+      .run('http', 'https://dev3.com', 60, 'dev3', 'dev');
+
+    const monitors = db.prepare('SELECT * FROM monitors WHERE group_name = ?').all('dev');
+    expect(monitors).toHaveLength(3);
+  });
+});
+
+describe('Edit Monitor Group', () => {
+  let db;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.exec(`
+      CREATE TABLE monitors (
+        id INTEGER PRIMARY KEY,
+        type TEXT NOT NULL,
+        url TEXT NOT NULL,
+        interval INTEGER DEFAULT 60,
+        name TEXT,
+        webhook_url TEXT,
+        group_name TEXT
+      );
+    `);
+    db.prepare('INSERT INTO monitors (type, url, interval, name, group_name) VALUES (?, ?, ?, ?, ?)')
+      .run('http', 'https://example.com', 60, 'test', 'dev');
+  });
+
+  afterEach(() => {
+    db.close();
+  });
+
+  it('should update monitor group', () => {
+    db.prepare('UPDATE monitors SET group_name = ? WHERE name = ?').run('prod', 'test');
+
+    const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('test');
+    expect(monitor.group_name).toBe('prod');
+  });
+
+  it('should remove monitor from group', () => {
+    db.prepare('UPDATE monitors SET group_name = NULL WHERE name = ?').run('test');
+
+    const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('test');
+    expect(monitor.group_name).toBeNull();
+  });
+
+  it('should handle "none" as removing from group', () => {
+    const input = 'none';
+    const groupName = input.toLowerCase() === 'none' ? null : input;
+    
+    db.prepare('UPDATE monitors SET group_name = ? WHERE name = ?').run(groupName, 'test');
+
+    const monitor = db.prepare('SELECT * FROM monitors WHERE name = ?').get('test');
+    expect(monitor.group_name).toBeNull();
+  });
+});
+
+describe('Status Command with Group Filter', () => {
+  it('should recognize group filter option', () => {
+    const options = { group: 'dev' };
+    expect(options.group).toBe('dev');
+  });
+
+  it('should handle null group filter', () => {
+    const options = {};
+    const groupFilter = options.group || null;
+    expect(groupFilter).toBeNull();
+  });
+
+  it('should filter monitors by group', () => {
+    const monitors = [
+      { id: 1, name: 'dev1', groupName: 'dev' },
+      { id: 2, name: 'prod1', groupName: 'prod' },
+      { id: 3, name: 'ungrouped', groupName: null }
+    ];
+
+    const devMonitors = monitors.filter(m => m.groupName === 'dev');
+    expect(devMonitors).toHaveLength(1);
+    expect(devMonitors[0].name).toBe('dev1');
+  });
+
+  it('should filter ungrouped monitors', () => {
+    const monitors = [
+      { id: 1, name: 'dev1', groupName: 'dev' },
+      { id: 2, name: 'ungrouped', groupName: null }
+    ];
+
+    const ungrouped = monitors.filter(m => !m.groupName);
+    expect(ungrouped).toHaveLength(1);
+    expect(ungrouped[0].name).toBe('ungrouped');
   });
 });

@@ -1,0 +1,41 @@
+name: Changeset Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check:
+    name: Check for Changeset
+    runs-on: ubuntu-latest
+    # Skip check for dependabot and version PRs
+    if: |
+      github.actor != 'dependabot[bot]' &&
+      !startsWith(github.head_ref, 'changeset-release/')
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check for Changesets
+        continue-on-error: true
+        run: |
+          if npx changeset status --since=origin/${{ github.base_ref }}; then
+            echo "✅ Changeset found!"
+            exit 0
+          else
+            echo "⚠️ No changeset found"
+            echo ""
+            echo "If this PR changes code, run: npm run changeset"
+            echo "If this is docs/tests only, mention it in the PR description"
+            exit 1
+          fi

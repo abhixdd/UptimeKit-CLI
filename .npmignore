@@ -22,4 +22,7 @@ tests/
 jest.config.js
 coverage/
 
+# Changesets (only needed for development)
+.changeset/
+
 CONTRIBUTING.md

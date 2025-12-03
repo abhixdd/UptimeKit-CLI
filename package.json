@@ -48,7 +48,7 @@
     "better-sqlite3": "^12.4.5",
     "chalk": "^5.3.0",
     "commander": "^11.1.0",
-    "date-fns": "^2.30.0",
+    "date-fns": "^4.1.0",
     "ink": "^4.4.1",
     "mkdirp": "^3.0.1",
     "node-notifier": "^10.0.1",

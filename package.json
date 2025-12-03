@@ -30,7 +30,10 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --no-colors",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch --no-colors",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --no-colors",
-    "test:update-snapshots": "node --experimental-vm-modules node_modules/jest/bin/jest.js --updateSnapshot --no-colors"
+    "test:update-snapshots": "node --experimental-vm-modules node_modules/jest/bin/jest.js --updateSnapshot --no-colors",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "npm run build && changeset publish"
   },
   "keywords": [
     "cli",
@@ -62,6 +65,7 @@
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
     "@babel/preset-react": "^7.28.5",
+    "@changesets/cli": "^2.29.8",
     "ink-testing-library": "^4.0.0",
     "jest": "^30.2.0"
   }

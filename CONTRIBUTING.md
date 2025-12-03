@@ -198,6 +198,38 @@ tests/
 4. Verify daemon behavior
 5. Check UI rendering
 
+## Changesets & Versioning
+
+We use [Changesets](https://github.com/changesets/changesets) for releases.
+
+### Adding a changeset
+
+```bash
+npm run changeset
+```
+
+Pick the version type:
+- **patch** (1.2.26 → 1.2.27) - bug fixes
+- **minor** (1.2.26 → 1.3.0) - new features
+- **major** (1.2.26 → 2.0.0) - breaking changes
+
+Write a quick summary, commit the generated file with your PR.
+
+### When you need one
+
+**Add a changeset if your PR has:**
+- ✅ Bug fixes
+- ✅ New features
+- ✅ Breaking changes
+
+**Don't add a changeset if your PR only has:**
+- ❌ Documentation updates
+- ❌ Test changes
+- ❌ CI/workflow changes
+- ❌ Typo fixes
+
+For minor fixes like docs or typos, skip the changeset. No need to run anything extra!
+
 ## Reporting Issues
 
 ### Bug Reports

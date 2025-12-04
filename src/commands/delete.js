@@ -25,8 +25,21 @@ export function registerDeleteCommand(program) {
 
       try {
         const db = getDB();
-        db.prepare('DELETE FROM heartbeats WHERE monitor_id = ?').run(monitor.id);
+
+        try {
+          db.prepare('DELETE FROM heartbeats WHERE monitor_id = ?').run(monitor.id);
+        } catch (err) {
+          console.log(err);
+        }
+        try {
+          db.prepare('DELETE FROM ssl_certificates WHERE monitor_id = ?').run(monitor.id);
+        } catch (err) {
+          console.log(err);
+          console.log('If you are on verison  1.2.20 below, ignore this error')
+        }
+
         db.prepare('DELETE FROM monitors WHERE id = ?').run(monitor.id);
+
         console.log(chalk.green(`Deleted monitor: ${monitor.name || monitor.url}`));
       } catch (err) {
         console.error(chalk.red('Failed to delete monitor:'), err.message);

@@ -63,7 +63,7 @@ export async function initDB() {
 
   try {
     const cols = db.prepare("PRAGMA table_info('monitors')").all();
-    
+
 
     if (!cols.some(c => c.name === 'name')) {
       db.prepare('ALTER TABLE monitors ADD COLUMN name TEXT').run();
@@ -172,6 +172,12 @@ export function resetDB() {
 
 export function addMonitor(type, url, interval, name = null, webhookUrl = null, groupName = null) {
   const db = getDB();
+
+  // Validate interval
+  if (interval < 1 || !Number.isInteger(interval)) {
+    throw new Error('Interval must be a positive integer (minimum 1 second).');
+  }
+
   if (name) {
     const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?)').get(name);
     if (existing) {
@@ -185,6 +191,10 @@ export function addMonitor(type, url, interval, name = null, webhookUrl = null, 
 export function updateMonitor(id, updates) {
   const db = getDB();
   const { name, url, type, interval, webhook_url, group_name } = updates;
+
+  if (interval !== undefined && (interval < 1 || !Number.isInteger(interval))) {
+    throw new Error('Interval must be a positive integer (minimum 1 second).');
+  }
 
   if (name) {
     const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?) AND id != ?').get(name, id);
@@ -217,7 +227,8 @@ export function getMonitors() {
 export function getMonitorByIdOrName(idOrName) {
   const db = getDB();
   const s = String(idOrName || '').trim();
-  if (!s) return null;
+
+  if (!s || s.length === 0) return null;
 
   if (/^[0-9]+$/.test(s)) {
     const byId = db.prepare('SELECT * FROM monitors WHERE id = ?').get(Number(s));
@@ -362,7 +373,7 @@ export function setNotificationSettings(enabled) {
 export function upsertSSLCertificate(monitorId, certData) {
   const db = getDB();
   const { issuer, subject, validFrom, validTo, daysRemaining, serialNumber, fingerprint } = certData;
-  
+
   const stmt = db.prepare(`
     INSERT INTO ssl_certificates (monitor_id, issuer, subject, valid_from, valid_to, days_remaining, serial_number, fingerprint, last_checked)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -376,7 +387,7 @@ export function upsertSSLCertificate(monitorId, certData) {
       fingerprint = excluded.fingerprint,
       last_checked = CURRENT_TIMESTAMP
   `);
-  
+
   return stmt.run(monitorId, issuer, subject, validFrom, validTo, daysRemaining, serialNumber, fingerprint);
 }
 
@@ -416,29 +427,29 @@ export function renameGroup(oldName, newName) {
   if (!groupExists(oldName)) {
     throw new Error(`Group '${oldName}' does not exist.`);
   }
-  
+
   const existingNew = db.prepare('SELECT 1 FROM monitors WHERE lower(group_name) = lower(?) AND lower(group_name) != lower(?) LIMIT 1').get(newName, oldName);
   if (existingNew) {
     throw new Error(`Group '${newName}' already exists.`);
   }
-  
+
   const stmt = db.prepare('UPDATE monitors SET group_name = ? WHERE lower(group_name) = lower(?)');
   return stmt.run(newName, oldName);
 }
 
 export function deleteGroup(groupName, deleteMonitors = false) {
   const db = getDB();
-  
+
   if (!groupExists(groupName)) {
     throw new Error(`Group '${groupName}' does not exist.`);
   }
-  
+
   if (deleteMonitors) {
     db.prepare(`
       DELETE FROM heartbeats 
       WHERE monitor_id IN (SELECT id FROM monitors WHERE lower(group_name) = lower(?))
     `).run(groupName);
-    
+
     db.prepare(`
       DELETE FROM ssl_certificates 
       WHERE monitor_id IN (SELECT id FROM monitors WHERE lower(group_name) = lower(?))
@@ -460,10 +471,10 @@ export function getMonitorsByGroup(groupName) {
 
 export function getStatsByGroup(groupName) {
   const allStats = getStats();
-  
+
   if (groupName === null || groupName === 'ungrouped') {
     return allStats.filter(s => !s.groupName || s.groupName === '');
   }
-  
+
   return allStats.filter(s => s.groupName && s.groupName.toLowerCase() === groupName.toLowerCase());
 }

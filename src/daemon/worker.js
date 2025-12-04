@@ -89,7 +89,7 @@ async function checkMonitor(monitor) {
       // SSL certificate monitoring
       let hostname = monitor.url;
       let port = 443;
-      
+
       try {
         if (hostname.includes('://')) {
           const parsed = new URL(hostname);
@@ -101,21 +101,22 @@ async function checkMonitor(monitor) {
           port = parseInt(parts[1]) || 443;
         }
       } catch (e) {
-       console.error('Error parsing SSL monitor URL:', e);
+        console.error('Error parsing SSL monitor URL:', e);
       }
-      
+
       const certInfo = await checkSSLCertificate(hostname, port);
       latency = Date.now() - start;
-      
+
       upsertSSLCertificate(monitor.id, certInfo);
-  
+
       status = certInfo.isValid ? 'up' : 'down';
-      
+
       monitor._sslCertInfo = certInfo;
     }
   } catch (error) {
     status = 'down';
     latency = Date.now() - start;
+    console.error(`Check failed for monitor ${monitor.name || monitor.url} (${monitor.type}):`, error.message);
   }
 
   // Get previous status to detect changes
@@ -156,14 +157,15 @@ async function checkMonitor(monitor) {
     if (notificationsEnabled) {
       const days = monitor._sslCertInfo.daysRemaining;
       const monitorData = activeMonitors.get(monitor.id);
-      const lastNotifiedDays = monitorData?.lastSSLNotifiedDays;
-      
+      const lastNotifiedThreshold = monitorData?.lastSSLNotifiedThreshold || 0;
+
+
       const thresholds = [30, 14, 7, 3, 1];
       for (const threshold of thresholds) {
-        if (days <= threshold && (lastNotifiedDays === undefined || lastNotifiedDays > threshold)) {
+        if (days <= threshold && lastNotifiedThreshold < threshold) {
           notifySSLExpiring(monitor, days);
           if (monitorData) {
-            monitorData.lastSSLNotifiedDays = days;
+            monitorData.lastSSLNotifiedThreshold = threshold;
           }
           break;
         }

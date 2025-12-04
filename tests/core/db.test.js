@@ -32,6 +32,7 @@ beforeAll(async () => {
       port INTEGER,
       interval INTEGER NOT NULL,
       webhook_url TEXT,
+      group_name TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -71,15 +72,15 @@ beforeAll(async () => {
   db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('notifications_enabled', '1')").run();
 
   testFunctions = {
-    addMonitor: (type, url, interval, name = null, webhookUrl = null) => {
+    addMonitor: (type, url, interval, name = null, webhookUrl = null, groupName = null) => {
       if (name) {
         const existing = db.prepare('SELECT id FROM monitors WHERE lower(name) = lower(?)').get(name);
         if (existing) {
           throw new Error(`Monitor with name '${name}' already exists.`);
         }
       }
-      const stmt = db.prepare('INSERT INTO monitors (type, url, interval, name, webhook_url) VALUES (?, ?, ?, ?, ?)');
-      return stmt.run(type, url, interval, name, webhookUrl);
+      const stmt = db.prepare('INSERT INTO monitors (type, url, interval, name, webhook_url, group_name) VALUES (?, ?, ?, ?, ?, ?)');
+      return stmt.run(type, url, interval, name, webhookUrl, groupName);
     },
 
     updateMonitor: (id, updates) => {
@@ -160,7 +161,7 @@ beforeAll(async () => {
 
     upsertSSLCertificate: (monitorId, certData) => {
       const { issuer, subject, validFrom, validTo, daysRemaining, serialNumber, fingerprint } = certData;
-      
+
       const stmt = db.prepare(`
         INSERT INTO ssl_certificates (monitor_id, issuer, subject, valid_from, valid_to, days_remaining, serial_number, fingerprint, last_checked)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -174,7 +175,7 @@ beforeAll(async () => {
           fingerprint = excluded.fingerprint,
           last_checked = CURRENT_TIMESTAMP
       `);
-      
+
       return stmt.run(monitorId, issuer, subject, validFrom, validTo, daysRemaining, serialNumber, fingerprint);
     },
 
@@ -209,7 +210,7 @@ describe('Database Module', () => {
   describe('addMonitor', () => {
     it('should add a new HTTP monitor', () => {
       const result = testFunctions.addMonitor('http', 'https://example.com', 60, 'example', null);
-      
+
       expect(result.changes).toBe(1);
       expect(result.lastInsertRowid).toBeGreaterThan(0);
     });
@@ -222,9 +223,9 @@ describe('Database Module', () => {
         'testsite',
         'https://webhook.example.com/hook'
       );
-      
+
       expect(result.changes).toBe(1);
-      
+
       const monitors = testFunctions.getMonitors();
       expect(monitors).toHaveLength(1);
       expect(monitors[0]).toMatchObject({
@@ -238,7 +239,7 @@ describe('Database Module', () => {
 
     it('should add ICMP monitor', () => {
       const result = testFunctions.addMonitor('icmp', '8.8.8.8', 60, 'google-dns');
-      
+
       expect(result.changes).toBe(1);
       const monitors = testFunctions.getMonitors();
       expect(monitors[0].type).toBe('icmp');
@@ -246,7 +247,7 @@ describe('Database Module', () => {
 
     it('should add DNS monitor', () => {
       const result = testFunctions.addMonitor('dns', 'google.com', 120, 'google-dns');
-      
+
       expect(result.changes).toBe(1);
       const monitors = testFunctions.getMonitors();
       expect(monitors[0].type).toBe('dns');
@@ -254,7 +255,7 @@ describe('Database Module', () => {
 
     it('should add SSL monitor', () => {
       const result = testFunctions.addMonitor('ssl', 'github.com', 3600, 'github-ssl');
-      
+
       expect(result.changes).toBe(1);
       const monitors = testFunctions.getMonitors();
       expect(monitors[0].type).toBe('ssl');
@@ -262,7 +263,7 @@ describe('Database Module', () => {
 
     it('should throw error for duplicate monitor name', () => {
       testFunctions.addMonitor('http', 'https://example.com', 60, 'mysite');
-      
+
       expect(() => {
         testFunctions.addMonitor('http', 'https://another.com', 60, 'mysite');
       }).toThrow("Monitor with name 'mysite' already exists.");
@@ -271,7 +272,7 @@ describe('Database Module', () => {
     it('should allow same URL with different names', () => {
       testFunctions.addMonitor('http', 'https://example.com', 60, 'site1');
       testFunctions.addMonitor('http', 'https://example.com', 60, 'site2');
-      
+
       const monitors = testFunctions.getMonitors();
       expect(monitors).toHaveLength(2);
     });
@@ -287,7 +288,7 @@ describe('Database Module', () => {
       testFunctions.addMonitor('http', 'https://a.com', 60, 'a');
       testFunctions.addMonitor('icmp', '1.1.1.1', 30, 'b');
       testFunctions.addMonitor('dns', 'example.com', 120, 'c');
-      
+
       const monitors = testFunctions.getMonitors();
       expect(monitors).toHaveLength(3);
     });
@@ -302,7 +303,7 @@ describe('Database Module', () => {
     it('should find monitor by ID', () => {
       const monitors = testFunctions.getMonitors();
       const firstId = monitors[0].id;
-      
+
       const found = testFunctions.getMonitorByIdOrName(String(firstId));
       expect(found).not.toBeNull();
       expect(found.id).toBe(firstId);
@@ -354,35 +355,35 @@ describe('Database Module', () => {
 
     it('should update monitor name', () => {
       testFunctions.updateMonitor(monitorId, { name: 'newname' });
-      
+
       const monitor = testFunctions.getMonitorByIdOrName(String(monitorId));
       expect(monitor.name).toBe('newname');
     });
 
     it('should update monitor URL', () => {
       testFunctions.updateMonitor(monitorId, { url: 'https://new.com' });
-      
+
       const monitor = testFunctions.getMonitorByIdOrName(String(monitorId));
       expect(monitor.url).toBe('https://new.com');
     });
 
     it('should update monitor interval', () => {
       testFunctions.updateMonitor(monitorId, { interval: 120 });
-      
+
       const monitor = testFunctions.getMonitorByIdOrName(String(monitorId));
       expect(monitor.interval).toBe(120);
     });
 
     it('should update monitor type', () => {
       testFunctions.updateMonitor(monitorId, { type: 'icmp' });
-      
+
       const monitor = testFunctions.getMonitorByIdOrName(String(monitorId));
       expect(monitor.type).toBe('icmp');
     });
 
     it('should update webhook URL', () => {
       testFunctions.updateMonitor(monitorId, { webhook_url: 'https://webhook.com/hook' });
-      
+
       const monitor = testFunctions.getMonitorByIdOrName(String(monitorId));
       expect(monitor.webhook_url).toBe('https://webhook.com/hook');
     });
@@ -393,7 +394,7 @@ describe('Database Module', () => {
         url: 'https://updated.com',
         interval: 90
       });
-      
+
       const monitor = testFunctions.getMonitorByIdOrName(String(monitorId));
       expect(monitor.name).toBe('updated');
       expect(monitor.url).toBe('https://updated.com');
@@ -402,7 +403,7 @@ describe('Database Module', () => {
 
     it('should throw error when updating to duplicate name', () => {
       testFunctions.addMonitor('http', 'https://other.com', 60, 'othername');
-      
+
       expect(() => {
         testFunctions.updateMonitor(monitorId, { name: 'othername' });
       }).toThrow("Monitor with name 'othername' already exists.");
@@ -412,7 +413,7 @@ describe('Database Module', () => {
       const before = testFunctions.getMonitorByIdOrName(String(monitorId));
       testFunctions.updateMonitor(monitorId, {});
       const after = testFunctions.getMonitorByIdOrName(String(monitorId));
-      
+
       expect(before.name).toBe(after.name);
       expect(before.url).toBe(after.url);
     });
@@ -428,9 +429,9 @@ describe('Database Module', () => {
 
     it('should log a heartbeat with up status', () => {
       const result = testFunctions.logHeartbeat(monitorId, 'up', 150);
-      
+
       expect(result.changes).toBe(1);
-      
+
       const heartbeats = testFunctions.getHeartbeatsForMonitor(monitorId);
       expect(heartbeats).toHaveLength(1);
       expect(heartbeats[0].status).toBe('up');
@@ -439,7 +440,7 @@ describe('Database Module', () => {
 
     it('should log a heartbeat with down status', () => {
       testFunctions.logHeartbeat(monitorId, 'down', 0);
-      
+
       const heartbeats = testFunctions.getHeartbeatsForMonitor(monitorId);
       expect(heartbeats[0].status).toBe('down');
     });
@@ -449,7 +450,7 @@ describe('Database Module', () => {
       testFunctions.logHeartbeat(monitorId, 'up', 120);
       testFunctions.logHeartbeat(monitorId, 'down', 0);
       testFunctions.logHeartbeat(monitorId, 'up', 80);
-      
+
       const heartbeats = testFunctions.getHeartbeatsForMonitor(monitorId, 10);
       expect(heartbeats).toHaveLength(4);
     });
@@ -461,7 +462,7 @@ describe('Database Module', () => {
     beforeEach(() => {
       const result = testFunctions.addMonitor('http', 'https://example.com', 60, 'test');
       monitorId = result.lastInsertRowid;
-      
+
       for (let i = 0; i < 5; i++) {
         testFunctions.logHeartbeat(monitorId, i % 2 === 0 ? 'up' : 'down', 100 + i * 10);
       }
@@ -469,7 +470,7 @@ describe('Database Module', () => {
 
     it('should return heartbeats in descending order by timestamp', () => {
       const heartbeats = testFunctions.getHeartbeatsForMonitor(monitorId);
-      
+
       for (let i = 0; i < heartbeats.length - 1; i++) {
         expect(new Date(heartbeats[i].timestamp) >= new Date(heartbeats[i + 1].timestamp)).toBe(true);
       }
@@ -494,7 +495,7 @@ describe('Database Module', () => {
 
     it('should disable notifications', () => {
       testFunctions.setNotificationSettings(false);
-      
+
       const enabled = testFunctions.getNotificationSettings();
       expect(enabled).toBe(false);
     });
@@ -502,7 +503,7 @@ describe('Database Module', () => {
     it('should re-enable notifications', () => {
       testFunctions.setNotificationSettings(false);
       testFunctions.setNotificationSettings(true);
-      
+
       const enabled = testFunctions.getNotificationSettings();
       expect(enabled).toBe(true);
     });
@@ -526,10 +527,10 @@ describe('Database Module', () => {
         serialNumber: 'ABC123',
         fingerprint: 'SHA256:ABCDEF123456'
       };
-      
+
       const result = testFunctions.upsertSSLCertificate(monitorId, certData);
       expect(result.changes).toBe(1);
-      
+
       const cert = testFunctions.getSSLCertificate(monitorId);
       expect(cert).not.toBeNull();
       expect(cert.issuer).toBe('DigiCert');
@@ -547,9 +548,9 @@ describe('Database Module', () => {
         serialNumber: 'ABC123',
         fingerprint: 'SHA256:OLD'
       };
-      
+
       testFunctions.upsertSSLCertificate(monitorId, certData1);
-      
+
       const certData2 = {
         issuer: 'Let\'s Encrypt',
         subject: 'github.com',
@@ -559,9 +560,9 @@ describe('Database Module', () => {
         serialNumber: 'DEF456',
         fingerprint: 'SHA256:NEW'
       };
-      
+
       testFunctions.upsertSSLCertificate(monitorId, certData2);
-      
+
       const cert = testFunctions.getSSLCertificate(monitorId);
       expect(cert.issuer).toBe("Let's Encrypt");
       expect(cert.days_remaining).toBe(180);

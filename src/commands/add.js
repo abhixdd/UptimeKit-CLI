@@ -6,7 +6,7 @@ import readline from 'readline';
 const MonitorSchema = z.object({
   url: z.string().min(1),
   type: z.enum(['http', 'icmp', 'dns', 'ssl']),
-  interval: z.number().min(1)
+  interval: z.number().int().min(1).positive()
 });
 
 export function registerAddCommand(program) {
@@ -129,7 +129,7 @@ export function registerAddCommand(program) {
           } else {
             finalUrl = host;
           }
-          if (options.interval < '200') {
+          if (parseInt(options.interval, 10) < 200) {
             console.log(chalk.gray('Note: SSL checks typically don\'t need frequent intervals. Consider using -i 3600 (1 hour) or higher.'));
           }
         }
@@ -155,7 +155,7 @@ export function registerAddCommand(program) {
 
         const groupName = options.group || null;
         addMonitor(data.type, data.url, data.interval, name, options.webhook, groupName);
-        
+
         let successMsg = `Monitor added: ${name} (${data.url}, ${data.type})`;
         if (groupName) {
           successMsg += ` [Group: ${groupName}]`;

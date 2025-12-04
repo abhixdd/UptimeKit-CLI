@@ -11,22 +11,28 @@ export function registerClearCommand(program) {
       await initDB();
 
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-      rl.question('This will delete all monitors and heartbeats. Are you sure? (y/n): ', async (answer) => {
+
+      const answer = await new Promise(resolve => {
+        rl.question('This will delete all monitors and heartbeats. Are you sure? (y/n): ', (ans) => {
+          rl.close();
+          resolve(ans.trim().toLowerCase());
+        });
+      });
+
+      if (answer === 'y' || answer === 'yes') {
         try {
-          const normalized = (answer || '').trim().toLowerCase();
-          if (normalized === 'y' || normalized === 'yes') {
-            const db = getDB();
-            db.prepare('DELETE FROM heartbeats').run();
-            db.prepare('DELETE FROM monitors').run();
-            console.log(chalk.green('All monitor and heartbeat data cleared.'));
-          } else {
-            console.log(chalk.yellow('Clear operation aborted.'));
-          }
+          const db = getDB();
+          db.prepare('DELETE FROM ssl_certificates').run();
+          db.prepare('DELETE FROM heartbeats').run();
+          db.prepare('DELETE FROM monitors').run();
+          console.log(chalk.green('All monitor and heartbeat data cleared.'));
         } catch (err) {
           console.error(chalk.red('Error while clearing DB:'), err.message);
-        } finally {
-          rl.close();
         }
-      });
+      } else {
+        console.log(chalk.yellow('Clear operation aborted.'));
+      }
+
+      process.exit(0);
     });
 }

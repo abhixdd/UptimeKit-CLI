@@ -6,7 +6,7 @@ import readline from 'readline';
 const MonitorSchema = z.object({
     url: z.string().min(1).optional(),
     type: z.enum(['http', 'icmp', 'dns', 'ssl']).optional(),
-    interval: z.number().min(1).optional(),
+    interval: z.number().int().min(1).positive().optional(),
     name: z.string().optional(),
     webhook_url: z.string().nullable().optional(),
     group_name: z.string().nullable().optional()

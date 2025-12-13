@@ -74,7 +74,7 @@ const Dashboard = ({ groupFilter = null }) => {
         await initDB();
         const stats = groupFilter ? getStatsByGroup(groupFilter) : getStats();
         setMonitors(stats);
-        
+
         const groupList = getGroups();
         setGroups(groupList);
       } catch (error) {
@@ -98,7 +98,7 @@ const Dashboard = ({ groupFilter = null }) => {
 
   const groupedMonitors = {};
   const ungroupedMonitors = [];
-  
+
   regularMonitors.forEach(m => {
     if (m.groupName && m.groupName.trim() !== '') {
       if (!groupedMonitors[m.groupName]) {
@@ -146,7 +146,7 @@ const Dashboard = ({ groupFilter = null }) => {
         </Box>
       )}
 
- 
+
       {sortedGroupNames.map(groupName => (
         <MonitorTable
           key={groupName}
@@ -171,10 +171,10 @@ const Dashboard = ({ groupFilter = null }) => {
           <Box borderStyle="single" borderColor="gray" paddingX={1}>
             <Box width="6%"><Text bold color="magenta">#</Text></Box>
             <Box width="19%"><Text bold color="magenta">Name</Text></Box>
-            <Box width="25%"><Text bold color="magenta">Host</Text></Box>
-            <Box width="12%"><Text bold color="magenta">Status</Text></Box>
+            <Box width="23%"><Text bold color="magenta">Host</Text></Box>
+            <Box width="14%"><Text bold color="magenta">Status</Text></Box>
             <Box width="12%"><Text bold color="magenta">Days Left</Text></Box>
-            <Box width="18%"><Text bold color="magenta">Expires</Text></Box>
+            <Box width="16%"><Text bold color="magenta">Expires</Text></Box>
             <Box width="20%"><Text bold color="magenta">Issuer</Text></Box>
           </Box>
           {sslMonitors.map((m) => {
@@ -222,12 +222,12 @@ const Dashboard = ({ groupFilter = null }) => {
               <Box key={m.id} borderStyle="single" borderColor="gray" borderTop={false} paddingX={1}>
                 <Box width="6%"><Text>{m.id}</Text></Box>
                 <Box width="19%"><Text>{displayName}</Text></Box>
-                <Box width="25%"><Text>{displayHost}</Text></Box>
-                <Box width="12%">{statusDisplay}</Box>
+                <Box width="23%"><Text>{displayHost}</Text></Box>
+                <Box width="14%">{statusDisplay}</Box>
                 <Box width="12%">
                   <Text color={daysColor} bold>{days !== null && days !== undefined ? `${days} days` : 'N/A'}</Text>
                 </Box>
-                <Box width="18%"><Text color="gray">{expiryDate}</Text></Box>
+                <Box width="16%"><Text color="gray">{expiryDate}</Text></Box>
                 <Box width="20%"><Text color="gray" dimColor>{issuer}</Text></Box>
               </Box>
             );

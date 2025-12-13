@@ -27,10 +27,9 @@ exports[`Dashboard Component Snapshots should render SSL monitor with critical e
 │                                                                                                  │
 │ SSL Certificate Monitors                                                                         │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name            Host                Status    Days Left Expires        Issuer           │ │
+│ │ #    Name            Host               Status      Days Left Expires      Issuer            │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Critical SSL    urgent.com          ⚠         3 days    12/1/2024      Comodo           │ │
-│ │                                          EXPIRING                                            │ │
+│ │ 1    Critical SSL    urgent.com         ⚠ EXPIRING  3 days    12/1/2024    Comodo            │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
@@ -43,9 +42,9 @@ exports[`Dashboard Component Snapshots should render SSL monitor with expiring c
 │                                                                                                  │
 │ SSL Certificate Monitors                                                                         │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name            Host                Status    Days Left Expires        Issuer           │ │
+│ │ #    Name            Host               Status      Days Left Expires      Issuer            │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    Expiring SSL    example.com         ⚠ WARNING 17 days   12/15/2024     Let's Encrypt    │ │
+│ │ 1    Expiring SSL    example.com        ⚠ WARNING   17 days   12/15/2024   Let's Encrypt     │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
@@ -80,9 +79,9 @@ exports[`Dashboard Component Snapshots should render mixed regular and SSL monit
 │                                                                                                  │
 │ SSL Certificate Monitors                                                                         │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name            Host                Status    Days Left Expires        Issuer           │ │
+│ │ #    Name            Host               Status      Days Left Expires      Issuer            │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 3    Main SSL        mainsite.com        ✔ VALID   185 days  6/1/2025       Cloudflare       │ │
+│ │ 3    Main SSL        mainsite.com       ✔ VALID     185 days  6/1/2025     Cloudflare        │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
@@ -95,9 +94,9 @@ exports[`Dashboard Component Snapshots should render with SSL monitors 1`] = `
 │                                                                                                  │
 │ SSL Certificate Monitors                                                                         │
 │ ┌──────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ #    Name            Host                Status    Days Left Expires        Issuer           │ │
+│ │ #    Name            Host               Status      Days Left Expires      Issuer            │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
-│ │ 1    GitHub SSL      github.com          ✔ VALID   180 days  1/1/2025       DigiCert         │ │
+│ │ 1    GitHub SSL      github.com         ✔ VALID     180 days  1/1/2025     DigiCert          │ │
 │ └──────────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
@@ -453,7 +452,7 @@ exports[`MonitorDetail Component Snapshots should render high latency monitor (>
 exports[`MonitorDetail Component Snapshots should render loading state 1`] = `
 "╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
 │                                                                                                  │
-│ ⏳ Loading data...                                                                                │
+│ ⏳ Loading data...                                                                               │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;
@@ -484,7 +483,7 @@ exports[`MonitorDetail Component Snapshots should render monitor with webhook UR
 exports[`MonitorDetail Component Snapshots should render not found state 1`] = `
 "╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
 │                                                                                                  │
-│ ❌ Monitor not found.                                                                             │
+│ ❌ Monitor not found.                                                                            │
 │                                                                                                  │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯"
 `;

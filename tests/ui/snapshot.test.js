@@ -123,12 +123,12 @@ const SSLMonitorRow = ({ monitor }) => {
     <Box borderStyle="single" borderColor="gray" borderTop={false} paddingX={1}>
       <Box width="6%"><Text>{monitor.id}</Text></Box>
       <Box width="19%"><Text>{displayName}</Text></Box>
-      <Box width="25%"><Text>{displayHost}</Text></Box>
-      <Box width="12%">{statusDisplay}</Box>
+      <Box width="23%"><Text>{displayHost}</Text></Box>
+      <Box width="14%">{statusDisplay}</Box>
       <Box width="12%">
         <Text color={daysColor} bold>{days !== null && days !== undefined ? `${days} days` : 'N/A'}</Text>
       </Box>
-      <Box width="18%"><Text color="gray">{expiryDate}</Text></Box>
+      <Box width="16%"><Text color="gray">{expiryDate}</Text></Box>
       <Box width="20%"><Text color="gray" dimColor>{issuer}</Text></Box>
     </Box>
   );
@@ -141,7 +141,7 @@ const SimpleDashboard = ({ monitors = [], groupFilter = null, groups = [] }) => 
 
   return (
     <Box flexDirection="column" padding={1} borderStyle="round" borderColor="cyan">
-      <DashboardHeader 
+      <DashboardHeader
         upCount={monitors.filter(m => m.status === 'up').length}
         downCount={monitors.filter(m => m.status !== 'up').length}
         groupFilter={groupFilter}
@@ -184,10 +184,10 @@ const SimpleDashboard = ({ monitors = [], groupFilter = null, groups = [] }) => 
           <Box borderStyle="single" borderColor="gray" paddingX={1}>
             <Box width="6%"><Text bold color="magenta">#</Text></Box>
             <Box width="19%"><Text bold color="magenta">Name</Text></Box>
-            <Box width="25%"><Text bold color="magenta">Host</Text></Box>
-            <Box width="12%"><Text bold color="magenta">Status</Text></Box>
+            <Box width="23%"><Text bold color="magenta">Host</Text></Box>
+            <Box width="14%"><Text bold color="magenta">Status</Text></Box>
             <Box width="12%"><Text bold color="magenta">Days Left</Text></Box>
-            <Box width="18%"><Text bold color="magenta">Expires</Text></Box>
+            <Box width="16%"><Text bold color="magenta">Expires</Text></Box>
             <Box width="20%"><Text bold color="magenta">Issuer</Text></Box>
           </Box>
           {sslMonitors.map((m) => <SSLMonitorRow key={m.id} monitor={m} />)}
@@ -324,10 +324,10 @@ const SimpleMonitorDetail = ({ monitor, heartbeats = [], sslCert = null, notFoun
         </Box>
 
         <Box flexDirection="row" justifyContent="space-between">
-          <StatBox 
-            label="Days Remaining" 
-            value={daysRemaining !== null && daysRemaining !== undefined ? `${daysRemaining} days` : 'N/A'} 
-            color={daysColor} 
+          <StatBox
+            label="Days Remaining"
+            value={daysRemaining !== null && daysRemaining !== undefined ? `${daysRemaining} days` : 'N/A'}
+            color={daysColor}
           />
           <StatBox label="Validity Rate" value={`${stats.uptime}%`} color={parseFloat(stats.uptime) > 99 ? "green" : "yellow"} />
         </Box>
@@ -402,7 +402,7 @@ describe('Dashboard Component Snapshots', () => {
       lastCheck: '30 seconds ago',
       ssl: null
     }];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -422,7 +422,7 @@ describe('Dashboard Component Snapshots', () => {
       lastCheck: '10 seconds ago',
       ssl: null
     }];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -434,7 +434,7 @@ describe('Dashboard Component Snapshots', () => {
       { id: 2, name: 'Google DNS', type: 'icmp', url: '8.8.8.8', interval: 30, uptime: '100.00', lastDowntime: 'No downtime', status: 'up', latency: 25, lastCheck: '5 seconds ago', ssl: null },
       { id: 3, name: 'DNS Check', type: 'dns', url: 'google.com', interval: 120, uptime: '99.80', lastDowntime: '2 hours ago', status: 'up', latency: 45, lastCheck: '1 minute ago', ssl: null }
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -460,7 +460,7 @@ describe('Dashboard Component Snapshots', () => {
         daysRemaining: 180
       }
     }];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -486,7 +486,7 @@ describe('Dashboard Component Snapshots', () => {
         daysRemaining: 17
       }
     }];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -512,7 +512,7 @@ describe('Dashboard Component Snapshots', () => {
         daysRemaining: 3
       }
     }];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -524,7 +524,7 @@ describe('Dashboard Component Snapshots', () => {
       { id: 2, name: 'API Server', type: 'http', url: 'https://api.mainsite.com', interval: 30, uptime: '99.90', lastDowntime: '1 day ago', status: 'up', latency: 45, lastCheck: '10 seconds ago', ssl: null },
       { id: 3, name: 'Main SSL', type: 'ssl', url: 'mainsite.com', interval: 3600, uptime: '100.00', lastDowntime: 'No downtime', status: 'up', latency: 220, lastCheck: '30 minutes ago', ssl: { issuer: 'Cloudflare', subject: 'mainsite.com', validFrom: '2024-06-01', validTo: '2025-06-01', daysRemaining: 185 } }
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -536,7 +536,7 @@ describe('Dashboard Component Snapshots', () => {
       { id: 2, name: 'Up2', type: 'http', url: 'https://up2.com', interval: 60, uptime: '100', lastDowntime: 'No downtime', status: 'up', latency: 100, lastCheck: 'now', ssl: null },
       { id: 3, name: 'Down1', type: 'http', url: 'https://down1.com', interval: 60, uptime: '50', lastDowntime: 'now', status: 'down', latency: 0, lastCheck: 'now', ssl: null },
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -556,7 +556,7 @@ describe('Dashboard Component Snapshots', () => {
       lastCheck: '10 seconds ago',
       ssl: null
     }];
-    
+
     const { lastFrame, unmount } = render(<SimpleDashboard monitors={monitors} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -592,7 +592,7 @@ describe('MonitorDetail Component Snapshots', () => {
       { status: 'down', timestamp: '2024-11-28 11:57:00', latency: 0 },
       { status: 'up', timestamp: '2024-11-28 11:56:00', latency: 140 },
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -613,7 +613,7 @@ describe('MonitorDetail Component Snapshots', () => {
       { status: 'down', timestamp: '2024-11-28 11:59:00', latency: 0 },
       { status: 'up', timestamp: '2024-11-28 11:58:30', latency: 200 },
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -626,7 +626,7 @@ describe('MonitorDetail Component Snapshots', () => {
       { status: 'up', timestamp: '2024-11-28 11:59:30', latency: 28 },
       { status: 'up', timestamp: '2024-11-28 11:59:00', latency: 22 },
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -647,7 +647,7 @@ describe('MonitorDetail Component Snapshots', () => {
       serial_number: '0A:1B:2C:3D',
       fingerprint: 'SHA256:AABBCCDD'
     };
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} sslCert={sslCert} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -663,7 +663,7 @@ describe('MonitorDetail Component Snapshots', () => {
       valid_to: '2024-12-15',
       days_remaining: 17
     };
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} sslCert={sslCert} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -679,7 +679,7 @@ describe('MonitorDetail Component Snapshots', () => {
       valid_to: '2024-12-01',
       days_remaining: 3
     };
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} sslCert={sslCert} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -695,7 +695,7 @@ describe('MonitorDetail Component Snapshots', () => {
       valid_to: '2024-01-01',
       days_remaining: -330
     };
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} sslCert={sslCert} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -711,7 +711,7 @@ describe('MonitorDetail Component Snapshots', () => {
       webhook_url: 'https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXX'
     };
     const heartbeats = [{ status: 'up', timestamp: '2024-11-28 12:00:00', latency: 100 }];
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -719,7 +719,7 @@ describe('MonitorDetail Component Snapshots', () => {
 
   it('should render with no heartbeat data', () => {
     const monitor = { id: 9, name: 'New Monitor', type: 'http', url: 'https://new.example.com', interval: 60, webhook_url: null };
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={[]} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -733,7 +733,7 @@ describe('MonitorDetail Component Snapshots', () => {
       { status: 'up', timestamp: '2024-11-28 11:58:00', latency: 780 },
       { status: 'up', timestamp: '2024-11-28 11:57:00', latency: 650 },
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -754,7 +754,7 @@ describe('MonitorDetail Component Snapshots', () => {
       { status: 'up', timestamp: '2024-11-28 11:59:30', latency: 115 },
       { status: 'up', timestamp: '2024-11-28 11:59:00', latency: 125 },
     ];
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();
@@ -781,7 +781,7 @@ describe('MonitorDetail Component Snapshots', () => {
       valid_to: '2025-02-15',
       days_remaining: 79
     };
-    
+
     const { lastFrame, unmount } = render(<SimpleMonitorDetail monitor={monitor} heartbeats={heartbeats} sslCert={sslCert} />);
     expect(lastFrame()).toMatchSnapshot();
     unmount();

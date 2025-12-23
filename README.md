@@ -5,7 +5,7 @@
 **Production-ready uptime monitoring from your terminal**
 
 [![npm version](https://img.shields.io/npm/v/uptimekit.svg?style=flat-square)](https://www.npmjs.com/package/uptimekit)
-[![npm downloads](https://img.shields.io/npm/dm/uptimekit.svg?style=flat-square)](https://www.npmjs.com/package/uptimekit)
+[![npm downloads](https://img.shields.io/npm/dt/uptimekit.svg?style=flat-square)](https://www.npmjs.com/package/uptimekit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 </div>

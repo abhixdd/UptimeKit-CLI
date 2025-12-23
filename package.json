@@ -50,7 +50,7 @@
     "axios": "^1.6.0",
     "better-sqlite3": "^12.4.5",
     "chalk": "^5.3.0",
-    "commander": "^11.1.0",
+    "commander": "^14.0.2",
     "date-fns": "^4.1.0",
     "ink": "^6.5.1",
     "mkdirp": "^3.0.1",

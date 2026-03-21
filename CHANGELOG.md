@@ -1,5 +1,11 @@
 # uptimekit
 
+## 1.3.1
+
+### Patch Changes
+
+- 8ba4caa: Migrate to OIDC passwordless NPM publishing
+
 ## 1.3.0
 
 ### Minor Changes

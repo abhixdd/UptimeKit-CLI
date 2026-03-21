@@ -1,17 +1,21 @@
 # uptimekit
 
+## 1.3.0
+
+### Minor Changes
+
+- cd84490: Allow specification of retries (monitor add/edit --retries,-r) before a notification is sent
+
 ## 1.2.28
 
 ### Patch Changes
 
 - 3a128ef: ### Bug Fixes
-
   - Fixed SSL monitor table layout where status text was wrapping incorrectly
 
   - Adjusted column widths for better alignment
 
   ### Improvements
-
   - Updated Ink to latest version
 
   - Updated React to latest version
